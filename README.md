@@ -13,25 +13,7 @@ A Django-based API Gateway for managing roles, permissions, and menus in the Ber
 
 ---
 
-## Project Structure
 
-```
-berar_api_gatway/
-├── auth_system/
-│   ├── models/
-│   │   ├── role.py
-│   │   ├── role_permission.py
-│   │   └── menus.py
-│   ├── serializers/
-│   │   ├── role_serializer.py
-│   │   └── role_permission_serializer.py
-│   └── ...
-├── .gitignore
-├── README.md
-└── ...
-```
-
----
 
 ## Setup Instructions
 
@@ -58,35 +40,42 @@ berar_api_gatway/
    python manage.py migrate
    ```
 
-5. **Seed initial admin user:**
-   ```sh
-   python manage.py seed_user
-   ```
-   This command will create a default admin user for login.
+---
 
-6. **(Optional) Seed additional data:**
-   ```sh
-   python manage.py loaddata <your_seed_file>.json
-   ```
+## Seeding Data
 
-7. **Run the development server:**
-   ```sh
-   python manage.py runserver
-   ```
+You can seed data using individual commands or a single combined command:
 
-8. **Seed initial menu data:**
-   ```sh
-   python manage.py seed_menu
-   ```
-   This command will create the following default menus:
-   - Dashboard
-   - Users
-   - Roles
-   - Clients
-   - API
-   - Vendors
-   - System
-   - Reports
+### **Single Seeder Command (Recommended)**
+Run all seeders (admin user, menus, admin role & permissions) in order:
+```sh
+python manage.py seed_all
+```
+This will:
+- Create the admin user
+- Create default menus
+- Create the admin role and assign all permissions for all menus to the admin role
+
+### **Individual Seeder Commands**
+You can also run each seeder separately if needed:
+```sh
+python manage.py seed_user
+python manage.py seed_menu
+python manage.py seed_admin_role_permission
+```
+
+### **(Optional) Seed additional data:**
+```sh
+python manage.py loaddata <your_seed_file>.json
+```
+
+---
+
+## Run the Development Server
+
+```sh
+python manage.py runserver
+```
 
 ---
 
