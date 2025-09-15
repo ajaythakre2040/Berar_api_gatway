@@ -74,6 +74,20 @@ berar_api_gatway/
    python manage.py runserver
    ```
 
+8. **Seed initial menu data:**
+   ```sh
+   python manage.py seed_menu
+   ```
+   This command will create the following default menus:
+   - Dashboard
+   - Users
+   - Roles
+   - Clients
+   - API
+   - Vendors
+   - System
+   - Reports
+
 ---
 
 ## Usage
