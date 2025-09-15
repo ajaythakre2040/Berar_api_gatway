@@ -1,4 +1,3 @@
-from .role_management import RoleManagement
 from .user_menagement import UserManagement
 from .client_management import ClientManagement
 from .vendor_management import VendorManagement
