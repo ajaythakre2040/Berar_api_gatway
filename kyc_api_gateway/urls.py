@@ -16,6 +16,16 @@ from kyc_api_gateway.views.vendor_management_view import (
      VendorManagementListCreate, VendorManagementDetail,
 )
 
+from kyc_api_gateway.views.api_management_view import (
+
+     ApiManagementListCreate, ApiManagementDetail,
+)
+
+from kyc_api_gateway.views.vendor_management_view import (
+
+     VendorAllCount,
+)
+
 
 urlpatterns = [
 
@@ -27,5 +37,11 @@ urlpatterns = [
 
     path("vendors_management/", VendorManagementListCreate.as_view(), name="client_management_list_create"),
     path("vendors_management/<int:pk>/", VendorManagementDetail.as_view(), name="client_management_detail"),
+
+    path('api_management/', ApiManagementListCreate.as_view(), name='api_list_create'),
+    path('api_management/<int:pk>/', ApiManagementDetail.as_view(), name='api_detail'),
+
+    path('active_count/', VendorAllCount.as_view(), name='Vendor_all_count'),
+
 
 ]
