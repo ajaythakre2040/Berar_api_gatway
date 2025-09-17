@@ -7,6 +7,8 @@ from kyc_api_gateway.models.client_management import ClientManagement
 from kyc_api_gateway.serializers.client_management_serializer import ClientManagementSerializer
 from rest_framework.permissions import IsAuthenticated
 from auth_system.permissions.token_valid import IsTokenValid
+from kyc_api_gateway.models.api_management import ApiManagement
+from kyc_api_gateway.models.user_menagement import UserManagement
 
 
 class ClientManagementListCreate(APIView):
@@ -145,6 +147,11 @@ class ClientAllCount(APIView):
                 account_status="Active", deleted_at__isnull=True
             ).count()
 
+            total_api = ApiManagement.objects.filter(deleted_at__isnull=True).count()
+
+            total_user = UserManagement.objects.filter(deleted_at__isnull=True).count()
+
+
             return Response(
                 {
                     "success": True,
@@ -152,6 +159,8 @@ class ClientAllCount(APIView):
                     "data": {
                         "total_client": total_client,
                         "total_active_client": total_active_client,
+                        "total_api": total_api,
+                        "total_user": total_user,
                     },
                 },
                 status=status.HTTP_200_OK,
@@ -166,3 +175,11 @@ class ClientAllCount(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        
+# class GetApi(APIView):
+#     permission_classes = [IsTokenValid,IsAuthenticated]
+
+#     def get(self,request):
+
+#             TotalApi = ApiManagement.objects.filter(deleted_at_isnull=True).count()
+
