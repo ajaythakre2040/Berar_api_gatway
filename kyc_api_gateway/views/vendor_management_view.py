@@ -159,7 +159,7 @@ class VendorAllCount(APIView):
             return Response(
                 {
                     "success": True,
-                    "message": "Counts retrieved successfully.",
+                    "message": " All Counts retrieved successfully.",
                     "data": {
                         "total_vendor": total_vendor,
                         "total_active_vendor": total_active_vendor,

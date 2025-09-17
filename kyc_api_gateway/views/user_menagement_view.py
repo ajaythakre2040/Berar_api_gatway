@@ -170,3 +170,38 @@ class UserManagementDetail(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+
+class UserAllCount(APIView):
+    permission_classes = [IsTokenValid, IsAuthenticated]
+
+    def get(self, request):
+        try:
+            total_user = UserManagement.objects.filter(deleted_at__isnull=True).count()
+
+            total_active_user = UserManagement.objects.filter(
+                status="Active", deleted_at__isnull=True
+            ).count()
+
+            return Response(
+                {
+                    "success": True,
+                    "message": " All Counts retrieved successfully.",
+                    "data": {
+                        "total_user": total_user,
+                        "total_active_user": total_active_user,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Failed to fetch counts.",
+                    "errors": str(e),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
