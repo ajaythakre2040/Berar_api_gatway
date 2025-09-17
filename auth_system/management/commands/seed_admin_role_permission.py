@@ -20,6 +20,7 @@ class Command(BaseCommand):
             role_name="Admin",
             defaults={
                 "level": 1,
+                "type": "System",
                 "description": "Administrator role with all permissions",
                 "role_code": "ADMIN",
                 "created_by": admin_user.id,

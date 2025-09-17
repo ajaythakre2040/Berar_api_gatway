@@ -5,6 +5,7 @@ class Role(models.Model):
     role_name = models.CharField(max_length=255, unique=True)
     role_code = models.CharField(max_length=255, unique=True)
     level = models.IntegerField(default=0)
+    type = models.CharField(max_length=50,default='Custom')  # New field added
     description = models.TextField(null=True, blank=True)
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
