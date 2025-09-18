@@ -7,14 +7,16 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 
+
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("The email is required.")
         if not extra_fields.get("mobile_number"):
             raise ValueError("The mobile number is required.")
-        if not extra_fields.get("full_name"):
-            raise ValueError("The full name is required.")
+        if not extra_fields.get("first_name") or not extra_fields.get("last_name"):
+            raise ValueError("Full name (first and last) is required.")
 
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
@@ -35,12 +37,12 @@ class UserManager(BaseUserManager):
 
 
 class TblUser(AbstractBaseUser, PermissionsMixin):
-
     mobile_regex = RegexValidator(
         regex=r"^\+?1?\d{9,15}$", message="Enter a valid mobile number."
     )
 
-    full_name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
 
     mobile_number = models.CharField(
         max_length=15,
@@ -49,14 +51,35 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
         validators=[mobile_regex],
     )
     email = models.EmailField(unique=True)
-    role_id = models.IntegerField(default=0)
+    username = models.CharField(max_length=255, unique=True)
+    # role_id = models.ForeignKey(  # ek default vendor
+    #     Role,
+    #     related_name="users_role",
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    # )
+    role_id = models.ForeignKey(
+        "auth_system.Role",  # <-- string reference avoids circular import
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users_role",
+        db_column="role_id",
+    )
+
+    status = models.IntegerField(default=0)
+    timeout = models.CharField(
+        default="30", max_length=100
+    )  # Changed to CharField with max_length
+    department = models.CharField(max_length=255)
+    position = models.CharField(max_length=255)
+
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-
     key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     created_by = models.IntegerField(null=True, blank=True)
-
     updated_by = models.IntegerField(null=True, blank=True)
     deleted_by = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -66,7 +89,7 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["mobile_number", "full_name"]
+    REQUIRED_FIELDS = ["mobile_number", "first_name", "last_name"]
 
     class Meta:
         db_table = "auth_system_user"
@@ -75,7 +98,13 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.full_name} ({self.email})"
+        return f"{self.first_name} {self.last_name} ({self.email})"
 
     def full_info(self):
-        return f"{self.full_name} ({self.mobile_number} / {self.email})"
+        return (
+            f"{self.first_name} {self.last_name} - {self.mobile_number} - {self.email}"
+        )
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"

@@ -10,12 +10,18 @@ class TblUserSerializer(serializers.ModelSerializer):
         model = TblUser
         fields = [
             "id",
-            "full_name",
             "role_id",
+            "status",
+            "first_name",
+            "last_name",
             "mobile_number",
             "email",
+            "username",
             "is_active",
             "key",
+            "timeout",
+            "department",
+            "position",
             "created_by",
             "updated_by",
             "deleted_by",
@@ -34,6 +40,7 @@ class TblUserSerializer(serializers.ModelSerializer):
             "updated_by",
             "deleted_by",
         ]
+        
 
     def create(self, validated_data):
         password = validated_data.pop("password")

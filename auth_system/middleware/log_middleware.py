@@ -8,7 +8,7 @@ from auth_system.models.login_session import LoginSession
 
 class APILogMiddleware(MiddlewareMixin):
     def process_request(self, request):
-    # --- Step 1: Authorization Token ---
+        # --- Step 1: Authorization Token ---
         auth_header = request.headers.get("Authorization", "")
         token = None
         if auth_header.startswith("Bearer "):
@@ -65,27 +65,23 @@ class APILogMiddleware(MiddlewareMixin):
             path = request.path_info
             method = request.method
 
-            
             EXCLUDED_PATHS = ["/admin/", "/static/", "/health/", "/test/"]
             if any(path.startswith(p) for p in EXCLUDED_PATHS):
                 return response
 
-            
             if path in ["/auth_system/login/", "/auth_system/logout/"]:
-                app_name = "dedup"
+                app_name = "auth_system"
             elif path.startswith("/auth_system/"):
                 app_name = "auth_system"
             else:
-                app_name = "dedup"
+                app_name = "auth_system"
 
-            
             user = getattr(request, "user", None)
             user_obj = user if user and user.is_authenticated else None
             token = request._token
             body_data = getattr(request, "_body_data", {})
             query_params = getattr(request, "_query_params", {})
 
-            
             if not user_obj:
                 if path == "/auth_system/login/":
                     username = body_data.get("username")
@@ -115,7 +111,6 @@ class APILogMiddleware(MiddlewareMixin):
                     except Exception as e:
                         print(f"[Middleware] Error fetching logout session user: {e}")
 
-            
             if path == "/auth_system/login/":
                 if (
                     response.status_code == 200
@@ -132,18 +127,15 @@ class APILogMiddleware(MiddlewareMixin):
                     except Exception as e:
                         print(f"[Middleware] Failed to parse login response UUID: {e}")
 
-            
             if method == "GET" and not query_params:
                 request_data = {"message": "Full data fetched"}
             else:
                 request_data = {**body_data, **query_params}
 
-            
             APILog = self._import_apilog_model(app_name)
             if not APILog:
                 return response
 
-            
             log_entry = APILog(
                 uniqid=request.uniqid,
                 user=user_obj,
@@ -153,7 +145,6 @@ class APILogMiddleware(MiddlewareMixin):
                 response_status=response.status_code,
             )
 
-            
             try:
                 if hasattr(response, "content") and response.get(
                     "Content-Type", ""
