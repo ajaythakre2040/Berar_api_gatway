@@ -12,6 +12,8 @@ from rest_framework_simplejwt.token_blacklist.models import (
 
 def generate_tokens_for_user(user: AbstractBaseUser) -> dict[str, str]:
     refresh = RefreshToken.for_user(user)
+
+    # Use full_name property from your model
     refresh["email"] = user.email
     refresh["full_name"] = user.full_name
     refresh["mobile_number"] = user.mobile_number
@@ -29,7 +31,6 @@ def blacklist_token(
         RefreshToken if token_type == "refresh" else AccessToken
     )
     token = token_cls(token_str)
-
 
     expires_at = make_aware(datetime.fromtimestamp(token["exp"]))
     outstanding_token, _ = OutstandingToken.objects.get_or_create(

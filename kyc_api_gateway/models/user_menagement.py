@@ -11,8 +11,8 @@ class UserManagement(models.Model):
     status = models.CharField(max_length=50)        
     session_timeout = models.IntegerField(default=30)  
     department = models.CharField(max_length=255)   
-    position = models.CharField(max_length=255)    
-    notes = models.TextField(null=True, blank=True) 
+    position = models.CharField(max_length=255)  
+      
 
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)

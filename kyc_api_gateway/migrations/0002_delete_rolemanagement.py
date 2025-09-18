@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> ce7d697a6f95fff822f68b470c89780a1fb449bf
 from django.db import migrations
 class Migration(migrations.Migration):
     dependencies = [

@@ -13,6 +13,7 @@ from auth_system.utils.token_utils import blacklist_token, generate_tokens_for_u
 from auth_system.utils.common import get_client_ip_and_agent, refresh_token_expiry_time
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -52,10 +53,10 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get("username")
+        username = request.data.get("username")
         password = request.data.get("password")
 
-        if not email or not password:
+        if not username or not password:
             return Response(
                 {
                     "success": False,
@@ -66,7 +67,10 @@ class LoginView(APIView):
             )
 
         try:
-            user = User.objects.get(email=email)
+            
+
+            user = User.objects.get(Q(email=username) | Q(username=username))
+            
         except User.DoesNotExist:
             return Response(
                 {

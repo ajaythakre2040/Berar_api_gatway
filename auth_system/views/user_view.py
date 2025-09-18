@@ -10,9 +10,6 @@ from auth_system.serializers.user import TblUserSerializer
 from django.db.models import Q
 
 from auth_system.utils.pagination import CustomPagination
-
-from auth_system.models.department import Department
-from auth_system.models.role_permission import RolePermission
 from rest_framework.views import APIView
 
 
@@ -26,18 +23,35 @@ class UserListCreateView(generics.ListCreateAPIView):
             search_query = request.GET.get("search", "").strip()
             queryset = TblUser.objects.filter(deleted_at__isnull=True)
 
+            # Count users
+            total_users = queryset.count(deleted_at__isnull=True)
+            active_users = queryset.filter(is_active=True).count()
+            inactive_users = queryset.filter(is_active=False).count()
+
+            # Filtering by search (can't use full_name — it's not a DB field)
             if search_query:
                 queryset = queryset.filter(
-                    Q(full_name__icontains=search_query)
-                    | Q(email__icontains=search_query)
-                    | Q(mobile_number__icontains=search_query)
+                    Q(first_name__icontains=search_query) |
+                    Q(last_name__icontains=search_query) |
+                    Q(email__icontains=search_query) |
+                    Q(mobile_number__icontains=search_query)
                 )
 
+            # Pagination
             page = self.paginate_queryset(queryset)
             if page is not None:
                 serializer = self.get_serializer(page, many=True)
-                return self.get_paginated_response(serializer.data)
+                return self.get_paginated_response({
+                    "counts": {
+                        "total_users": total_users,
+                        "active_users": active_users,
+                        "inactive_users": inactive_users
+                    },
+                    "users": serializer.data,
+                    
+                })
 
+            # No pagination fallback
             serializer = self.get_serializer(queryset, many=True)
             return Response(
                 {
@@ -45,9 +59,15 @@ class UserListCreateView(generics.ListCreateAPIView):
                     "message": "User list fetched successfully.",
                     "status_code": status.HTTP_200_OK,
                     "data": serializer.data,
+                    "counts": {
+                        "total_users": total_users,
+                        "active_users": active_users,
+                        "inactive_users": inactive_users
+                    },
                 },
                 status=status.HTTP_200_OK,
             )
+
         except Exception as e:
             return Response(
                 {
@@ -57,7 +77,6 @@ class UserListCreateView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
