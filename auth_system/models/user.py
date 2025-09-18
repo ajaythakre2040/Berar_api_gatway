@@ -79,3 +79,6 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
 
     def full_info(self):
         return f"{self.full_name} ({self.mobile_number} / {self.email})"
+
+
+

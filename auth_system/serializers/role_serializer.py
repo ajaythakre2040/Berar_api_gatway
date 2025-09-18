@@ -9,6 +9,18 @@ from auth_system.models.role_permission import RolePermission
 from auth_system.serializers.role_permission_serializer import RolePermissionSerializer
 from django.contrib.auth.models import Permission  # Or your custom permission model
 
+class RoleWithOutPermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        exclude = (
+            "created_by",
+            "updated_by",
+            "deleted_by",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+        )
+
 
 class RoleSerializer(serializers.ModelSerializer):
     permission = RolePermissionSerializer(many=True, write_only=True)

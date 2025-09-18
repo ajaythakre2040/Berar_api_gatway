@@ -9,7 +9,7 @@ from django.db import IntegrityError
 
 from auth_system.models.role import Role
 from auth_system.permissions.token_valid import IsTokenValid
-from auth_system.serializers.role_serializer import RoleSerializer
+from auth_system.serializers.role_serializer import RoleSerializer, RoleWithOutPermissionSerializer
 from auth_system.utils.pagination import CustomPagination
 from django.db.models import Q
 
@@ -151,3 +151,31 @@ class RoleDetailView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+
+class RoleList(APIView):
+    permission_classes = [IsAuthenticated, IsTokenValid]
+
+    def get(self, request):
+        try:
+            permissions = Role.objects.filter(deleted_at__isnull=True).order_by("id")
+            serializer =RoleWithOutPermissionSerializer(permissions, many=True)
+
+            return Response(
+                {
+                    "success": True,
+                    "message": "All role  retrieved successfully.",
+                    "data": serializer.data,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Failed to fetch role .",
+                    "errors": str(e),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )

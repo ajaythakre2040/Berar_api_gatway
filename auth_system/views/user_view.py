@@ -11,6 +11,10 @@ from django.db.models import Q
 
 from auth_system.utils.pagination import CustomPagination
 
+from auth_system.models.department import Department
+from auth_system.models.role_permission import RolePermission
+from rest_framework.views import APIView
+
 
 class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
@@ -141,3 +145,4 @@ class UserDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             },
             status=status.HTTP_200_OK,
         )
+

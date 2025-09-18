@@ -149,7 +149,7 @@ class ClientAllCount(APIView):
 
             total_api = ApiManagement.objects.filter(deleted_at__isnull=True).count()
 
-            total_user = UserManagement.objects.filter(deleted_at__isnull=True).count()
+            # total_user = UserManagement.objects.filter(deleted_at__isnull=True).count()
 
 
             return Response(
@@ -160,7 +160,7 @@ class ClientAllCount(APIView):
                         "total_client": total_client,
                         "total_active_client": total_active_client,
                         "total_api": total_api,
-                        "total_user": total_user,
+                        # "total_user": total_user,
                     },
                 },
                 status=status.HTTP_200_OK,
@@ -176,10 +176,3 @@ class ClientAllCount(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         
-# class GetApi(APIView):
-#     permission_classes = [IsTokenValid,IsAuthenticated]
-
-#     def get(self,request):
-
-#             TotalApi = ApiManagement.objects.filter(deleted_at_isnull=True).count()
-
