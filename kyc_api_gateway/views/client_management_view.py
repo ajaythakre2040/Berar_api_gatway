@@ -8,7 +8,6 @@ from kyc_api_gateway.serializers.client_management_serializer import ClientManag
 from rest_framework.permissions import IsAuthenticated
 from auth_system.permissions.token_valid import IsTokenValid
 from kyc_api_gateway.models.api_management import ApiManagement
-from kyc_api_gateway.models.user_menagement import UserManagement
 
 
 class ClientManagementListCreate(APIView):

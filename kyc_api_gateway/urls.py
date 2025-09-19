@@ -1,12 +1,5 @@
 from django.urls import path
 
-
-from kyc_api_gateway.views.user_menagement_view import (
-
-     UserManagementListCreate, UserManagementDetail,
-     UserAllCount,
-)
-
 from kyc_api_gateway.views.client_management_view import (
 
      ClientManagementListCreate, ClientManagementDetail,
@@ -26,11 +19,6 @@ from kyc_api_gateway.views.api_management_view import (
 
 
 urlpatterns = [
-
-    path("user_management/", UserManagementListCreate.as_view(), name="user_management_list_create"),
-    path("user_management/<int:pk>/", UserManagementDetail.as_view(), name="user_management_detail"),
-    path('user_active_count/', UserAllCount.as_view(), name='user_all_count'),
-
 
     path("client_management/", ClientManagementListCreate.as_view(), name="client_management_list_create"),
     path("client_management/<int:pk>/", ClientManagementDetail.as_view(), name="client_management_detail"),

@@ -72,7 +72,14 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
     timeout = models.CharField(
         default="30", max_length=100
     )  # Changed to CharField with max_length
-    department = models.CharField(max_length=255)
+    department =models.ForeignKey(
+        "auth_system.Department",  # <-- string reference avoids circular import
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="department_role",
+        db_column="department_id",
+    )
     position = models.CharField(max_length=255)
 
     is_active = models.BooleanField(default=True)
