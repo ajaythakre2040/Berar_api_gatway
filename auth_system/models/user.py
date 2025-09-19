@@ -8,7 +8,6 @@ from django.contrib.auth.models import (
 )
 
 
-
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -69,6 +68,7 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
     )
 
     status = models.IntegerField(default=0)
+    timezone = models.CharField(max_length=255, default="UTC",blank=True, null=True)
     timeout = models.CharField(
         default="30", max_length=100
     )  # Changed to CharField with max_length

@@ -1,19 +1,26 @@
 import re
 from rest_framework import serializers
 from auth_system.models.user import TblUser
-from auth_system.models.role import Role  # Ensure Role is imported
 
 
 class TblUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
+
+    # ✅ New fields for your requirement
     role_type = serializers.CharField(source="role_id.type", read_only=True)
+    role_name = serializers.CharField(source="role_id.role_name", read_only=True)
+    department_name = serializers.CharField(source="department.name", read_only=True)
+
+    permissions_count = serializers.SerializerMethodField()
 
     class Meta:
         model = TblUser
         fields = [
             "id",
             "role_id",
-            "role_type",
+            "role_type",  # Existing
+            "role_name",  # ✅ NEW
+            "permissions_count",  # ✅ NEW
             "status",
             "first_name",
             "last_name",
@@ -23,7 +30,9 @@ class TblUserSerializer(serializers.ModelSerializer):
             "is_active",
             "key",
             "timeout",
+            "timezone",
             "department",
+            "department_name",
             "position",
             "created_by",
             "updated_by",
@@ -43,7 +52,15 @@ class TblUserSerializer(serializers.ModelSerializer):
             "updated_by",
             "deleted_by",
             "role_type",
+            "role_name",  # ✅ NEW
+            "permissions_count",  # ✅ NEW
+            "department_name",
         ]
+
+    def get_permissions_count(self, obj):
+        if obj.role_id:
+            return obj.role_id.permissions.filter(deleted_at__isnull=True).count()
+        return 0
 
     def create(self, validated_data):
         password = validated_data.pop("password")

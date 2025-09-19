@@ -23,7 +23,8 @@ from auth_system.views.department_view import (
 
 from auth_system.views.role_view import RoleDetailView, RoleListCreateView, RoleList
 
-from auth_system.views.user_view import UserDetailUpdateDeleteView, UserListCreateView
+from auth_system.views.user_view import UserDetailUpdateDeleteView, UserListCreateView,UserStatusUpdateView
+
 
 urlpatterns = [
     path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -36,7 +37,11 @@ urlpatterns = [
         UserDetailUpdateDeleteView.as_view(),
         name="user-detail-update-delete",
     ),
-
+    path(
+        "users/update_status/<int:id>/",
+        UserStatusUpdateView.as_view(),
+        name="user-status-update",
+    ),
     path("menus/", MenuListCreateView.as_view(), name="menu-list-create"),
     path("menus/<int:pk>/", MenuDetailView.as_view(), name="menu-detail"),
     path("roles/", RoleListCreateView.as_view(), name="role-list-create"),
@@ -52,9 +57,7 @@ urlpatterns = [
         RolePermissionDetailView.as_view(),
         name="role-permission-detail",
     ),
-
     path("department/", DepartmentListCreate.as_view(), name="department-list-create"),
     path("department/<int:pk>/", DepartmentDetail.as_view(), name="department-detail"),
     path("department-list/", DepartmentList.as_view(), name="department-list"),
-
 ]

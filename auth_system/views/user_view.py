@@ -172,3 +172,46 @@ class UserDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+class UserStatusUpdateView(APIView):
+    permission_classes = [IsAuthenticated, IsTokenValid]
+
+    def patch(self, request, id, *args, **kwargs):
+        try:
+            user = TblUser.objects.get(id=id, deleted_at__isnull=True)
+        except TblUser.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "message": "User not found.",
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        new_status = request.data.get("status")
+        if new_status is None:
+            return Response(
+                {
+                    "success": False,
+                    "message": "Status field is required.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.status = new_status
+        user.updated_by = request.user.id
+        user.updated_at = timezone.now()
+        user.save()
+
+        serializer = TblUserSerializer(user)
+        return Response(
+            {
+                "success": True,
+                "message": "User status updated successfully.",
+                "status_code": status.HTTP_200_OK,
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
