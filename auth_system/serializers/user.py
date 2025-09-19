@@ -1,16 +1,19 @@
 import re
 from rest_framework import serializers
 from auth_system.models.user import TblUser
+from auth_system.models.role import Role  # Ensure Role is imported
 
 
 class TblUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
+    role_type = serializers.CharField(source="role_id.type", read_only=True)
 
     class Meta:
         model = TblUser
         fields = [
             "id",
             "role_id",
+            "role_type",
             "status",
             "first_name",
             "last_name",
@@ -39,8 +42,8 @@ class TblUserSerializer(serializers.ModelSerializer):
             "created_by",
             "updated_by",
             "deleted_by",
+            "role_type",
         ]
-        
 
     def create(self, validated_data):
         password = validated_data.pop("password")

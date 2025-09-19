@@ -23,33 +23,38 @@ class UserListCreateView(generics.ListCreateAPIView):
             search_query = request.GET.get("search", "").strip()
             queryset = TblUser.objects.filter(deleted_at__isnull=True)
 
-            # Count users
-            total_users = queryset.count(deleted_at__isnull=True)
-            active_users = queryset.filter(is_active=True).count()
-            inactive_users = queryset.filter(is_active=False).count()
-
-            # Filtering by search (can't use full_name — it's not a DB field)
+            # Filter by search query (optional)
             if search_query:
                 queryset = queryset.filter(
-                    Q(first_name__icontains=search_query) |
-                    Q(last_name__icontains=search_query) |
-                    Q(email__icontains=search_query) |
-                    Q(mobile_number__icontains=search_query)
+                    Q(first_name__icontains=search_query)
+                    | Q(last_name__icontains=search_query)
+                    | Q(email__icontains=search_query)
+                    | Q(mobile_number__icontains=search_query)
                 )
+
+            # Counts (after optional filtering)
+            total_users = queryset.count()
+            active_users = queryset.filter(status=1).count()
+            lock_users = queryset.filter(status=5).count()
+            custom_users = queryset.filter(role_id__type="Custom").count()
+            admin_users = queryset.filter(role_id__type="System").count()
 
             # Pagination
             page = self.paginate_queryset(queryset)
             if page is not None:
                 serializer = self.get_serializer(page, many=True)
-                return self.get_paginated_response({
-                    "counts": {
-                        "total_users": total_users,
-                        "active_users": active_users,
-                        "inactive_users": inactive_users
-                    },
-                    "users": serializer.data,
-                    
-                })
+                return self.get_paginated_response(
+                    {
+                        "counts": {
+                            "total_users": total_users,
+                            "active_users": active_users,
+                            "lock_users": lock_users,
+                            "custom_users": custom_users,
+                            "admin_users": admin_users,
+                        },
+                        "data": serializer.data,
+                    }
+                )
 
             # No pagination fallback
             serializer = self.get_serializer(queryset, many=True)
@@ -58,12 +63,14 @@ class UserListCreateView(generics.ListCreateAPIView):
                     "success": True,
                     "message": "User list fetched successfully.",
                     "status_code": status.HTTP_200_OK,
-                    "data": serializer.data,
                     "counts": {
                         "total_users": total_users,
                         "active_users": active_users,
-                        "inactive_users": inactive_users
+                        "lock_users": lock_users,
+                        "custom_users": custom_users,
+                        "admin_users": admin_users,
                     },
+                    "data": serializer.data,
                 },
                 status=status.HTTP_200_OK,
             )
@@ -77,6 +84,7 @@ class UserListCreateView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -164,4 +172,3 @@ class UserDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             },
             status=status.HTTP_200_OK,
         )
-
