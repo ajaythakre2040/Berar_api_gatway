@@ -10,45 +10,56 @@ from auth_system.permissions.token_valid import IsTokenValid  # assuming you use
 from kyc_api_gateway.models.api_management import ApiManagement
 from kyc_api_gateway.models.vendor_management import VendorManagement
 from kyc_api_gateway.serializers.api_management_serializer import ApiManagementSerializer
+from auth_system.utils.pagination import CustomPagination
+from django.db.models import Q
 
 
 class ApiManagementListCreate(APIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
 
     def get(self, request):
+        search_query = request.GET.get("search", "").strip()
+
         apis = ApiManagement.objects.filter(deleted_at__isnull=True)
-        serializer = ApiManagementSerializer(apis, many=True)
-        return Response(
-            {
-                "success": True,
-                "message": "API list retrieved successfully.",
-                "data": serializer.data,
-            },
-            status=status.HTTP_200_OK,
-        )
 
-    def post(self, request):
-        api_name = request.data.get("api_name")
-
-        # Duplicate check
-        if ApiManagement.objects.filter(api_name=api_name, deleted_at__isnull=True).exists():
-            return Response(
-                {
-                    "success": False,
-                    "message": "API with this name already exists.",
-                    "errors": {"api_name": ["Duplicate API name not allowed."]},
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+        if search_query:
+            apis = apis.filter(
+                Q(api_name__icontains=search_query)
+                | Q(endpoint_path__icontains=search_query)
+                | Q(http_method__icontains=search_query)
+                | Q(descriptions__icontains=search_query)
             )
 
+        apis = apis.order_by("id")
+
+        # pagination
+        paginator = CustomPagination()
+        page = paginator.paginate_queryset(apis, request)
+        serializer = ApiManagementSerializer(page, many=True)
+
+        total_apis = apis.count()
+        enabled_apis = apis.filter(enable_api_endpoint=True).count()
+        disabled_apis = apis.filter(enable_api_endpoint=False).count()
+
+        return paginator.get_custom_paginated_response(
+            data=serializer.data,
+            extra_fields={
+                "success": True,
+                "message": "API list retrieved successfully.",
+                "total_apis": total_apis,
+                "enabled_apis": enabled_apis,
+                "disabled_apis": disabled_apis,
+            },
+        )
+    
+    def post(self, request):
         serializer = ApiManagementSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(created_by=request.user.id, created_at=timezone.now())
+            serializer.save(created_by=request.user.id)
             return Response(
                 {
                     "success": True,
                     "message": "API created successfully.",
-                    # "data": serializer.data,
                 },
                 status=status.HTTP_201_CREATED,
             )
@@ -60,6 +71,7 @@ class ApiManagementListCreate(APIView):
             },
             status=status.HTTP_400_BAD_REQUEST,
         )
+
 
 
 class ApiManagementDetail(APIView):
@@ -80,40 +92,29 @@ class ApiManagementDetail(APIView):
             status=status.HTTP_200_OK,
         )
 
+
     def patch(self, request, pk):
         api = self.get_object(pk)
-        api_name = request.data.get("api_name")
 
-        # Duplicate check (excluding current ID)
-        if api_name and ApiManagement.objects.filter(api_name=api_name, deleted_at__isnull=True).exclude(id=pk).exists():
-            return Response(
+        serializer = ApiManagementSerializer(api, data=request.data, partial=True)
+        if serializer.is_valid():
+                serializer.save(updated_by=request.user.id)
+                return Response(
+                    {
+                        "success": True,
+                        "message": "API updated successfully.",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+        return Response(
                 {
                     "success": False,
-                    "message": "API with this name already exists.",
-                    "errors": {"api_name": ["Duplicate API name not allowed."]},
+                    "message": "Failed to update API.",
+                    "errors": serializer.errors,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = ApiManagementSerializer(api, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save(updated_by=request.user.id, updated_at=timezone.now())
-            return Response(
-                {
-                    "success": True,
-                    "message": "API updated successfully.",
-                    # "data": serializer.data,
-                },
-                status=status.HTTP_200_OK,
-            )
-        return Response(
-            {
-                "success": False,
-                "message": "Failed to update API.",
-                "errors": serializer.errors,
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     def delete(self, request, pk):
         api = self.get_object(pk)
