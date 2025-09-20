@@ -128,3 +128,19 @@ class ApiManagementDetail(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class ApiManagementList(APIView):
+      permission_classes = [IsAuthenticated, IsTokenValid]
+
+      def get(self, request):
+        apis = ApiManagement.objects.filter(deleted_at__isnull=True).order_by("id")
+        serializer = ApiManagementSerializer(apis, many=True)
+        return Response(
+            {
+                "success": True,
+                "message": "API list retrieved successfully.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )

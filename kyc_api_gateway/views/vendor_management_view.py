@@ -127,3 +127,34 @@ class VendorAllCount(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        
+
+        
+# class VendorApiList(APIView):
+#       permission_classes = [IsAuthenticated, IsTokenValid]
+
+#       def get(self, request):
+#         apis = VendorManagement.objects.filter(deleted_at__isnull=True).order_by("id")
+#         serializer = VendorManagementSerializer(apis, many=True)
+#         return Response(
+#             {
+#                 "success": True,
+#                 "message": "Vendor list retrieved successfully.",
+#                 "data": serializer.data,
+#             },
+#             status=status.HTTP_200_OK,
+#         )
+
+class VendorApiList(APIView):
+    permission_classes = [IsAuthenticated, IsTokenValid]
+
+    def get(self, request):
+        apis = VendorManagement.objects.filter(deleted_at__isnull=True).order_by("id").values("id", "vendor_name")
+        return Response(
+            {
+                "success": True,
+                "message": "API list retrieved successfully.",
+                "data": list(apis),
+            },
+            status=status.HTTP_200_OK,
+        )
