@@ -34,7 +34,7 @@ class RoleListCreateView(APIView):
         page = paginator.paginate_queryset(roles, request)
         serializer = RoleSerializer(page, many=True)
 
-        # Get total counts
+        
         total_roles = roles.count()
         total_permissions = sum(
             r.permissions.filter(deleted_at__isnull=True).count() for r in roles
@@ -48,7 +48,7 @@ class RoleListCreateView(APIView):
                 "message": "Roles retrieved successfully.",
                 "total_roles": total_roles,
                 "total_permissions": total_permissions,
-                "total_custom_roles": custom_roles_count,  # <-- add this line
+                "total_custom_roles": custom_roles_count,  
             },
         )
 
