@@ -3,8 +3,8 @@ from kyc_api_gateway.models.vendor_management import VendorManagement
 
 class ApiManagement(models.Model):
     api_name = models.CharField(max_length=255, unique=True)    
-    endpoint_path = models.CharField(max_length=255)         
-    http_method = models.CharField(max_length=10)
+    endpoint_path = models.CharField(max_length=255, unique=True)         
+    http_method = models.CharField(max_length=10, unique=True)
     
     supported_vendors = models.ManyToManyField(                # multiple vendors
         VendorManagement,

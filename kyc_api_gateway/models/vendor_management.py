@@ -2,8 +2,8 @@ from django.db import models
 
 
 class VendorManagement(models.Model):
-    display_name = models.CharField(max_length=255)               
-    internal_name = models.CharField(max_length=255)              
+    vendor_name = models.CharField(max_length=255,unique=True)               
+    # internal_name = models.CharField(max_length=255,unique=True)              
     base_url = models.CharField(max_length=255, unique=True)  
 
     contact_email = models.EmailField(max_length=255, unique=True) 

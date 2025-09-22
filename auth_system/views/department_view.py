@@ -56,7 +56,7 @@ class DepartmentListCreate(APIView):
                     {
                         "success": True,
                         "message": "Department created successfully.",
-                        "data": serializer.data,
+                        # "data": serializer.data,
                     },
                     status=status.HTTP_201_CREATED,
                 )

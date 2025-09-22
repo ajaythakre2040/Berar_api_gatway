@@ -8,55 +8,47 @@ from kyc_api_gateway.serializers.client_management_serializer import ClientManag
 from rest_framework.permissions import IsAuthenticated
 from auth_system.permissions.token_valid import IsTokenValid
 from kyc_api_gateway.models.api_management import ApiManagement
+from auth_system.utils.pagination import CustomPagination
+from django.db.models import Q
 
 
 class ClientManagementListCreate(APIView):
-    permission_classes = [IsAuthenticated,IsTokenValid]
-    # Get all clients
+    permission_classes = [IsAuthenticated, IsTokenValid]
+
     def get(self, request):
+        search_query = request.GET.get("search", "").strip()
         clients = ClientManagement.objects.filter(deleted_at__isnull=True)
-        serializer = ClientManagementSerializer(clients, many=True)
-        return Response(
-            {
+
+        # search filter
+        if search_query:
+            clients = clients.filter(
+                Q(company_name__icontains=search_query) |
+                Q(registration_number__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(phone__icontains=search_query)
+            )
+
+        clients = clients.order_by("id")
+
+        paginator = CustomPagination()
+        page = paginator.paginate_queryset(clients, request)
+        serializer = ClientManagementSerializer(page, many=True)
+
+        total_clients = clients.count()
+
+        return paginator.get_custom_paginated_response(
+            data=serializer.data,
+            extra_fields={
                 "success": True,
                 "message": "Client list retrieved successfully.",
-                "data": serializer.data,
+                "total_clients": total_clients,
             },
-            status=status.HTTP_200_OK,
         )
 
-    # Create new client
     def post(self, request):
-        company_name = request.data.get("company_name")
-        registration_number = request.data.get("registration_number")
-        email = request.data.get("email")
-        phone = request.data.get("phone")
-
-        # Duplicate checks
-        if ClientManagement.objects.filter(company_name=company_name, deleted_at__isnull=True).exists():
-            return Response(
-                {"success": False, "message": "Company name already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if ClientManagement.objects.filter(registration_number=registration_number, deleted_at__isnull=True).exists():
-            return Response(
-                {"success": False, "message": "Registration number already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if ClientManagement.objects.filter(email=email, deleted_at__isnull=True).exists():
-            return Response(
-                {"success": False, "message": "Email already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if ClientManagement.objects.filter(phone=phone, deleted_at__isnull=True).exists():
-            return Response(
-                {"success": False, "message": "Phone already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer = ClientManagementSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(created_by=request.user.id, created_at=timezone.now())
+            serializer.save(created_by=request.user.id)
             return Response(
                 {
                     "success": True,
@@ -65,13 +57,17 @@ class ClientManagementListCreate(APIView):
                 status=status.HTTP_201_CREATED,
             )
         return Response(
-            {"success": False, "message": "Failed to create client.", "errors": serializer.errors},
+            {
+                "success": False,
+                "message": "Failed to create client.",
+                "errors": serializer.errors,
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
-
+    
 
 class ClientManagementDetail(APIView):
-    permission_classes = [IsAuthenticated,IsTokenValid]
+    permission_classes = [IsAuthenticated, IsTokenValid]
 
     def get(self, request, pk):
         client = get_object_or_404(ClientManagement, pk=pk, deleted_at__isnull=True)
@@ -83,37 +79,9 @@ class ClientManagementDetail(APIView):
 
     def patch(self, request, pk):
         client = get_object_or_404(ClientManagement, pk=pk, deleted_at__isnull=True)
-
-        company_name = request.data.get("company_name")
-        registration_number = request.data.get("registration_number")
-        email = request.data.get("email")
-        phone = request.data.get("phone")
-
-        # Duplicate check (excluding self)
-        if company_name and ClientManagement.objects.filter(company_name=company_name, deleted_at__isnull=True).exclude(id=pk).exists():
-            return Response(
-                {"success": False, "message": "Company name already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if registration_number and ClientManagement.objects.filter(registration_number=registration_number, deleted_at__isnull=True).exclude(id=pk).exists():
-            return Response(
-                {"success": False, "message": "Registration number already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if email and ClientManagement.objects.filter(email=email, deleted_at__isnull=True).exclude(id=pk).exists():
-            return Response(
-                {"success": False, "message": "Email already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if phone and ClientManagement.objects.filter(phone=phone, deleted_at__isnull=True).exclude(id=pk).exists():
-            return Response(
-                {"success": False, "message": "Phone already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer = ClientManagementSerializer(client, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(updated_by=request.user.id, updated_at=timezone.now())
+            serializer.save(updated_by=request.user.id)
             return Response(
                 {"success": True, "message": "Client updated successfully."},
                 status=status.HTTP_200_OK,
@@ -123,7 +91,6 @@ class ClientManagementDetail(APIView):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Soft delete client
     def delete(self, request, pk):
         client = get_object_or_404(ClientManagement, pk=pk, deleted_at__isnull=True)
         client.deleted_at = timezone.now()
@@ -148,9 +115,6 @@ class ClientAllCount(APIView):
 
             total_api = ApiManagement.objects.filter(deleted_at__isnull=True).count()
 
-            # total_user = UserManagement.objects.filter(deleted_at__isnull=True).count()
-
-
             return Response(
                 {
                     "success": True,
@@ -159,7 +123,6 @@ class ClientAllCount(APIView):
                         "total_client": total_client,
                         "total_active_client": total_active_client,
                         "total_api": total_api,
-                        # "total_user": total_user,
                     },
                 },
                 status=status.HTTP_200_OK,
