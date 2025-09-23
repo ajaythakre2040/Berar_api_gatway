@@ -4,7 +4,9 @@ from rest_framework import status
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from kyc_api_gateway.models.vendor_management import VendorManagement
-from kyc_api_gateway.serializers.vendor_management_serializer import VendorManagementSerializer
+from kyc_api_gateway.serializers.vendor_management_serializer import (
+    VendorManagementSerializer,
+)
 from rest_framework.permissions import IsAuthenticated
 from auth_system.permissions.token_valid import IsTokenValid
 from auth_system.utils.pagination import CustomPagination
@@ -20,11 +22,11 @@ class VendorManagementListCreate(APIView):
 
         if search_query:
             vendors = vendors.filter(
-                Q(display_name__icontains=search_query) |
-                Q(internal_name__icontains=search_query) |
-                Q(base_url__icontains=search_query) |
-                Q(contact_email__icontains=search_query) |
-                Q(api_key__icontains=search_query)
+                Q(display_name__icontains=search_query)
+                | Q(internal_name__icontains=search_query)
+                | Q(base_url__icontains=search_query)
+                | Q(contact_email__icontains=search_query)
+                | Q(api_key__icontains=search_query)
             )
 
         vendors = vendors.order_by("id")
@@ -53,9 +55,13 @@ class VendorManagementListCreate(APIView):
                 status=status.HTTP_201_CREATED,
             )
         return Response(
-            {"success": False, "message": "Failed to create vendor.", "errors": serializer.errors},
+            {
+                "success": False,
+                "message": "Failed to create vendor.",
+                "errors": serializer.errors,
+            },
             status=status.HTTP_400_BAD_REQUEST,
-        )    
+        )
 
 
 class VendorManagementDetail(APIView):
@@ -65,7 +71,11 @@ class VendorManagementDetail(APIView):
         vendor = get_object_or_404(VendorManagement, pk=pk, deleted_at__isnull=True)
         serializer = VendorManagementSerializer(vendor)
         return Response(
-            {"success": True, "message": "Vendor retrieved successfully.", "data": serializer.data},
+            {
+                "success": True,
+                "message": "Vendor retrieved successfully.",
+                "data": serializer.data,
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -79,7 +89,11 @@ class VendorManagementDetail(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(
-            {"success": False, "message": "Failed to update vendor.", "errors": serializer.errors},
+            {
+                "success": False,
+                "message": "Failed to update vendor.",
+                "errors": serializer.errors,
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -94,13 +108,14 @@ class VendorManagementDetail(APIView):
         )
 
 
-
 class VendorAllCount(APIView):
     permission_classes = [IsTokenValid, IsAuthenticated]
 
     def get(self, request):
         try:
-            total_vendor = VendorManagement.objects.filter(deleted_at__isnull=True).count()
+            total_vendor = VendorManagement.objects.filter(
+                deleted_at__isnull=True
+            ).count()
 
             total_active_vendor = VendorManagement.objects.filter(
                 status="Active", deleted_at__isnull=True
@@ -127,29 +142,17 @@ class VendorAllCount(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        
 
-        
-# class VendorApiList(APIView):
-#       permission_classes = [IsAuthenticated, IsTokenValid]
-
-#       def get(self, request):
-#         apis = VendorManagement.objects.filter(deleted_at__isnull=True).order_by("id")
-#         serializer = VendorManagementSerializer(apis, many=True)
-#         return Response(
-#             {
-#                 "success": True,
-#                 "message": "Vendor list retrieved successfully.",
-#                 "data": serializer.data,
-#             },
-#             status=status.HTTP_200_OK,
-#         )
 
 class VendorApiList(APIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
 
     def get(self, request):
-        apis = VendorManagement.objects.filter(deleted_at__isnull=True).order_by("id").values("id", "vendor_name")
+        apis = (
+            VendorManagement.objects.filter(deleted_at__isnull=True)
+            .order_by("id")
+            .values("id", "vendor_name")
+        )
         return Response(
             {
                 "success": True,

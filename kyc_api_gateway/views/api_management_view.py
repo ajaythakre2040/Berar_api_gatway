@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
 from rest_framework.permissions import IsAuthenticated
-from auth_system.permissions.token_valid import IsTokenValid  # assuming you use this
+from auth_system.permissions.token_valid import IsTokenValid  
 
 from kyc_api_gateway.models.api_management import ApiManagement
 from kyc_api_gateway.models.vendor_management import VendorManagement
@@ -32,7 +32,7 @@ class ApiManagementListCreate(APIView):
 
         apis = apis.order_by("id")
 
-        # pagination
+        
         paginator = CustomPagination()
         page = paginator.paginate_queryset(apis, request)
         serializer = ApiManagementSerializer(page, many=True)
@@ -71,7 +71,6 @@ class ApiManagementListCreate(APIView):
             },
             status=status.HTTP_400_BAD_REQUEST,
         )
-
 
 
 class ApiManagementDetail(APIView):

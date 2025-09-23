@@ -19,7 +19,7 @@ class ClientManagementListCreate(APIView):
         search_query = request.GET.get("search", "").strip()
         clients = ClientManagement.objects.filter(deleted_at__isnull=True)
 
-        # search filter
+        
         if search_query:
             clients = clients.filter(
                 Q(company_name__icontains=search_query) |

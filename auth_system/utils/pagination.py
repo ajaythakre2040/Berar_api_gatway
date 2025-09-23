@@ -24,6 +24,7 @@ class CustomPagination(PageNumberPagination):
         response.update(
             {
                 "status": "success",
+                "status_code": 200,
                 "count": self.page.paginator.count,
                 "total_pages": math.ceil(
                     self.page.paginator.count / self.get_page_size(self.request)

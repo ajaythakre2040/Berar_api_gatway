@@ -21,48 +21,37 @@ class UserListCreateView(generics.ListCreateAPIView):
     def get(self, request, *args, **kwargs):
         try:
             search_query = request.GET.get("search", "").strip()
+            department_id = request.GET.get("department_id", "").strip()
+            role_id = request.GET.get("role_id", "").strip()
+            user_status = request.GET.get("status", "").strip()
+
             queryset = TblUser.objects.filter(deleted_at__isnull=True)
 
-            # Filter by search query (optional)
-            if search_query:
-                queryset = queryset.filter(
-                    Q(first_name__icontains=search_query)
-                    | Q(last_name__icontains=search_query)
-                    | Q(email__icontains=search_query)
-                    | Q(mobile_number__icontains=search_query)
-                )
-
-            # Counts (after optional filtering)
             total_users = queryset.count()
             active_users = queryset.filter(status=1).count()
             lock_users = queryset.filter(status=5).count()
             custom_users = queryset.filter(role_id__type="Custom").count()
             admin_users = queryset.filter(role_id__type="System").count()
 
-            # Pagination
-            page = self.paginate_queryset(queryset)
-            if page is not None:
-                serializer = self.get_serializer(page, many=True)
-                return self.get_paginated_response(
-                    {
-                        "counts": {
-                            "total_users": total_users,
-                            "active_users": active_users,
-                            "lock_users": lock_users,
-                            "custom_users": custom_users,
-                            "admin_users": admin_users,
-                        },
-                        "data": serializer.data,
-                    }
+            if search_query:
+                queryset = queryset.filter(
+                    Q(first_name__icontains=search_query)
+                    | Q(last_name__icontains=search_query)
                 )
+            if department_id:
+                queryset = queryset.filter(department_id=department_id)
 
-            # No pagination fallback
-            serializer = self.get_serializer(queryset, many=True)
-            return Response(
+            if role_id:
+                queryset = queryset.filter(role_id=role_id)
+
+            if user_status:
+                queryset = queryset.filter(status=user_status)
+
+            page = self.paginate_queryset(queryset)
+            serializer = self.get_serializer(page, many=True)
+
+            paginated_response = self.get_paginated_response(
                 {
-                    "success": True,
-                    "message": "User list fetched successfully.",
-                    "status_code": status.HTTP_200_OK,
                     "counts": {
                         "total_users": total_users,
                         "active_users": active_users,
@@ -71,9 +60,10 @@ class UserListCreateView(generics.ListCreateAPIView):
                         "admin_users": admin_users,
                     },
                     "data": serializer.data,
-                },
-                status=status.HTTP_200_OK,
+                }
             )
+
+            return paginated_response
 
         except Exception as e:
             return Response(
@@ -172,6 +162,7 @@ class UserDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
 
 class UserStatusUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
