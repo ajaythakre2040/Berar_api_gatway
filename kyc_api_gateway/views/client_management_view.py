@@ -17,6 +17,7 @@ class ClientManagementListCreate(APIView):
 
     def get(self, request):
         search_query = request.GET.get("search", "").strip()
+        
         clients = ClientManagement.objects.filter(deleted_at__isnull=True)
 
         
