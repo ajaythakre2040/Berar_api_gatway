@@ -24,7 +24,7 @@ class ClientManagement(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = "client_management"
+        db_table = "kyc_client_management"
         
     def __str__(self):
         return f"{self.company_name} ({self.business_type})"
