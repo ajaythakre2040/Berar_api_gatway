@@ -29,7 +29,7 @@ class ApiManagement(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = "api_management"
+        db_table = "kyc_api_management"
 
     def __str__(self):
         return self.api_name
