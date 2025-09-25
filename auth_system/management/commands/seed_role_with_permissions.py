@@ -1,40 +1,38 @@
+# auth_system/management/commands/seed_role_with_permissions.py
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from auth_system.models.role import Role
 from auth_system.models.role_permission import RolePermission
 from auth_system.models.menus import Menu
-from auth_system.models.user import TblUser
+
 
 class Command(BaseCommand):
-    help = "Seed the admin role and permissions for all menus"
+    help = "Seed Admin role and assign full permissions for all menus"
 
     def handle(self, *args, **kwargs):
-        # Get admin user (assumes [seed_user.py](http://_vscodecontentref_/2) has already run)
-        admin_user = TblUser.objects.filter(is_superuser=True).first()
-        if not admin_user:
-            self.stdout.write(self.style.ERROR("Admin user not found. Please run seed_user first."))
-            return
-
-        # Create admin role if not exists
+        # Create Admin Role
         admin_role, created = Role.objects.get_or_create(
-            role_name="Admin",
+            role_code="ADMIN",
             defaults={
+                "role_name": "Admin",
                 "level": 1,
                 "type": "System",
                 "description": "Administrator role with all permissions",
-                "role_code": "ADMIN",
-                "created_by": admin_user.id,
-            }
+                "created_by": 1,
+                "created_at": timezone.now(),
+            },
         )
+
         if created:
             self.stdout.write(self.style.SUCCESS("✅ Admin role created"))
         else:
-            self.stdout.write(self.style.WARNING("Admin role already exists"))
+            self.stdout.write(self.style.WARNING("⚠️ Admin role already exists"))
 
-        # Assign all permissions for all menus to admin role
+        # Assign Full Permissions to All Menus
         menus = Menu.objects.filter(deleted_at__isnull=True)
         for menu in menus:
-            perm, created = RolePermission.objects.get_or_create(
+            permission, created = RolePermission.objects.get_or_create(
                 role=admin_role,
                 menu_id=menu,
                 defaults={
@@ -46,11 +44,23 @@ class Command(BaseCommand):
                     "export": True,
                     "sms_send": True,
                     "api_limit": "",
-                    "created_by": admin_user.id,
+                    "created_by": 1,
                     "created_at": timezone.now(),
-                }
+                },
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f"Permission added for menu: {menu.menu_name}"))
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"✅ Permission added for menu: {menu.menu_name}"
+                    )
+                )
             else:
-                self.stdout.write(self.style.WARNING(f"Permission already exists for menu: {menu.menu_name}"))
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"⚠️ Permission already exists for menu: {menu.menu_name}"
+                    )
+                )
+
+        self.stdout.write(
+            self.style.SUCCESS("🎯 Admin role and all permissions seeded successfully.")
+        )
