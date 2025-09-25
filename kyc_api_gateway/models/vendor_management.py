@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-
 class VendorManagement(models.Model):
     vendor_name = models.CharField(max_length=255, unique=True)
     base_url = models.CharField(max_length=255, unique=True)
