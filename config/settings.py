@@ -13,18 +13,25 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 from corsheaders.defaults import default_headers
+from decouple import config
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-$1p36)ds5tc_*r+#ohq7rw5$+01lri-^-(63#y_*q0d=$2$4!k"
 
-# SECURITY WARNING: don't run with debug turned on in production!
+
+SECRET_KEY = 'django-insecure-#7x6*89t3f^ddvb618%9+0d0@vpn4nry&2dk3tinpevv1vn03q'
+API_KARZA_KEY = config("API_KARZA_KEY")
+API_SAND_KEY = config("API_SAND_KEY")
+API_SMS_KEY = config("API_SMS_KEY")
+API_KEY = config("API_KEY")
+
+
+KYC_API_BASE = config("KYC_API_BASE")
+KARZA_API_BASE = config("KARZA_API_BASE")
+PINNACLE_SMS_URL = config("PINNACLE_SMS_URL")
+
+
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
@@ -32,14 +39,13 @@ ALLOWED_HOSTS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     "https://your-frontend-domain.com",
-    "http://localhost:3031",  # or whatever port you're using
+    "http://localhost:3031",  
 ]
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "session-key",
     "x-forwarded-for",
 ]
 
-# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -56,23 +62,23 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # Required to be first
+    "corsheaders.middleware.CorsMiddleware",  
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "auth_system.middleware.log_middleware.APILogMiddleware",  # Custom logging middleware
+    "auth_system.middleware.log_middleware.APILogMiddleware", 
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
-        "auth_system.permissions.token_valid.IsTokenValid",  # ✅ Correct place
+        "auth_system.permissions.token_valid.IsTokenValid",  
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",  # ✅ This stays
+        "rest_framework_simplejwt.authentication.JWTAuthentication", 
     ],
 }
 

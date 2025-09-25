@@ -6,12 +6,12 @@ class ApiManagement(models.Model):
     endpoint_path = models.CharField(max_length=255, unique=True)         
     http_method = models.CharField(max_length=10, unique=True)
     
-    supported_vendors = models.ManyToManyField(                # multiple vendors
+    supported_vendors = models.ManyToManyField(
         VendorManagement,
         related_name="supported_apis"
     )
     
-    vendor = models.ForeignKey(                         # ek default vendor
+    vendor = models.ForeignKey(
         VendorManagement,
         related_name="default_apis",
         on_delete=models.SET_NULL,
@@ -20,7 +20,6 @@ class ApiManagement(models.Model):
     
     descriptions = models.TextField(null=True, blank=True)      
     enable_api_endpoint = models.BooleanField(default=True)     
-
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.IntegerField(null=True, blank=True)
