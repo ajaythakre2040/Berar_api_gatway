@@ -1,144 +1,59 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from datetime import timedelta
 from django.utils import timezone
-from kyc_api_gateway.models.pan_details import PanDetails
-from kyc_api_gateway.models.vendor_management import VendorManagement
+from kyc_api_gateway.models import PanDetails, VendorManagement
 from kyc_api_gateway.serializers.pan_details_serializer import PanDetailsSerializer
-import requests
-import logging
-
-logger = logging.getLogger(__name__)
+from kyc_api_gateway.services.pan_handler import call_vendor_api, save_pan_data
 
 
 class PanDetailsAPIView(APIView):
     def get(self, request):
         pan_number = request.GET.get("pan")
-        # consent = request.GET.get("consent")
-        # consent = "y"
-
-
-
         if not pan_number:
-            return Response(
-                {"error": "PAN number is required"}, status=status.HTTP_400_BAD_REQUEST
-            )
-        print(pan_number)
-        pan_number = pan_number.upper().strip()
+            return Response({"error": "PAN number is required"}, status=400)
 
-        # Step 1: DB Cache - 7 Days
+        pan_number = pan_number.upper().strip()
         seven_days_ago = timezone.now() - timedelta(days=7)
-        recent_pan = PanDetails.objects.filter(
+
+        cached = PanDetails.objects.filter(
             pan_number=pan_number,
             created_at__gte=seven_days_ago,
             deleted_at__isnull=True,
         ).first()
-        print(seven_days_ago)
-        print(recent_pan)
-        # print(recent_pan.__dict__)
 
-        if recent_pan:
-            serializer = PanDetailsSerializer(recent_pan)
+        if cached:
+            serializer = PanDetailsSerializer(cached)
             return Response(
-                {"message": "Data from cache (DB)", "data": serializer.data},
-                status=status.HTTP_200_OK,
+                {"message": "Data from cache", "data": serializer.data}, status=200
             )
 
-        # Step 2: Vendor API by priority
-        vendors = VendorManagement.objects.filter(status="Active").order_by("priority")
-        # print(vendors)
+        vendors = VendorManagement.objects.filter(
+            status="Active", deleted_at__isnull=True
+        ).order_by("priority")
 
         for vendor in vendors:
-            print(f"Checking Vendor: {vendor.vendor_name}, URL: {vendor.base_url}, Priority: {vendor.priority}")
-
-            try:
-                response = requests.get(
-                    vendor.base_url,
-                    params={"pan": pan_number},
-                    timeout=vendor.timeout or 10,
-                )
-
-                if response.status_code == 200:
+            response = call_vendor_api(vendor, pan_number)
+            if response:
+                try:
                     data = response.json()
-
-                    if self.is_valid_response(data):
+                    result = data.get("result") or data.get("data")
+                    if result and (result.get("pan") or result.get("pan_number")):
                         created_by = (
                             request.user.id if request.user.is_authenticated else 0
                         )
-
-                        pan_obj = self.save_pan_data(
-                            data=data,
-                            pan_number=pan_number,
-                            created_by=created_by,
-                        )
-
+                        pan_obj = save_pan_data(data, pan_number, created_by, vendor)
                         serializer = PanDetailsSerializer(pan_obj)
                         return Response(
                             {
-                                "message": f"Data fetched from vendor: {vendor.vendor_name}",
+                                "message": f"Fetched from {vendor.vendor_name}",
                                 "data": serializer.data,
                             },
-                            status=status.HTTP_200_OK,
+                            status=200,
                         )
-
-            except Exception as e:
-                print(f"Vendor API failed: {vendor.vendor_name}, Error: {str(e)}")
-
-                logger.warning(
-                    f"Vendor API failed: {vendor.vendor_name}, Error: {str(e)}"
-                )
-                continue
+                except Exception as e:
+                    print(f"Error processing response from {vendor.vendor_name}: {e}")
 
         return Response(
-            {"error": "Unable to fetch PAN details from all vendors"},
-            status=status.HTTP_502_BAD_GATEWAY,
+            {"error": "Unable to fetch PAN details from vendors"}, status=502
         )
-
-    def is_valid_response(self, data):
-        result = data.get("result") or data.get("data")
-        return result and result.get("pan")
-
-    def save_pan_data(self, data, pan_number,  created_by):
-        result = data.get("result") or data.get("data")
-
-        obj = PanDetails.objects.create(
-            pan_number=pan_number,
-            full_name=result.get("full_name") or result.get("name"),
-            first_name=result.get("firstName"),
-            middle_name=result.get("middleName"),
-            last_name=result.get("lastName"),
-            gender=result.get("gender"),
-            dob=result.get("dob") or result.get("input_dob"),
-            dob_verified=result.get("dob_verified"),
-            dob_check=result.get("dob_check"),
-            phone_number=result.get("mobileNo") or result.get("phone_number"),
-            email=result.get("emailId") or result.get("email"),
-            aadhaar_linked=result.get("aadhaarLinked") or result.get("aadhaar_linked"),
-            masked_aadhaar=result.get("masked_aadhaar"),
-            aadhaar_match=result.get("aadhaarMatch"),
-            pan_status=result.get("status"),
-            is_salaried=result.get("isSalaried"),
-            is_director=result.get("isDirector"),
-            is_sole_prop=result.get("isSoleProp"),
-            issue_date=result.get("issueDate"),
-            profile_match=result.get("profileMatch"),
-            category=result.get("category"),
-            less_info=result.get("less_info"),
-            request_id=data.get("requestId"),
-            client_id=data.get("client_id"),
-            address_line_1=result.get("address", {}).get("buildingName")
-            or result.get("address", {}).get("line_1"),
-            address_line_2=result.get("address", {}).get("locality")
-            or result.get("address", {}).get("line_2"),
-            street_name=result.get("address", {}).get("streetName")
-            or result.get("address", {}).get("street_name"),
-            city=result.get("address", {}).get("city"),
-            state=result.get("address", {}).get("state"),
-            pin_code=result.get("address", {}).get("pinCode")
-            or result.get("address", {}).get("zip"),
-            country=result.get("address", {}).get("country", "INDIA"),
-            full_address=result.get("address", {}).get("full"),
-            created_by=created_by,
-        )
-        return obj
