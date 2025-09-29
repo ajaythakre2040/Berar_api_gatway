@@ -1,5 +1,7 @@
 from django.db import models
 
+from constant import STATUS_PENDING, USER_STATUS_CHOICES
+
 
 class ClientManagement(models.Model):
     company_name = models.CharField(max_length=255,unique=True)             
@@ -12,14 +14,17 @@ class ClientManagement(models.Model):
     email = models.EmailField(max_length=255, unique=True)       
     phone = models.CharField(max_length=15, unique=True)         
     position = models.CharField(max_length=255)                  
-    account_status = models.CharField(max_length=100)            
+    status = models.IntegerField(
+            choices=USER_STATUS_CHOICES,  # choices optional, sirf admin panel ke liye
+            default=STATUS_PENDING
+        )   
     risk_level = models.CharField(max_length=100)               
     compliance_level = models.CharField(max_length=100)          
 
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.IntegerField(null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.IntegerField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 

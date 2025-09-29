@@ -12,6 +12,8 @@ from django.db.models import Q
 from auth_system.utils.pagination import CustomPagination
 from rest_framework.views import APIView
 
+from constant import STATUS_ACTIVE, STATUS_LOCKED
+
 
 class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
@@ -28,8 +30,8 @@ class UserListCreateView(generics.ListCreateAPIView):
             queryset = TblUser.objects.filter(deleted_at__isnull=True)
 
             total_users = queryset.count()
-            active_users = queryset.filter(status=1).count()
-            lock_users = queryset.filter(status=5).count()
+            active_users = queryset.filter(status=STATUS_ACTIVE).count()
+            lock_users = queryset.filter(status=STATUS_LOCKED).count()
             custom_users = queryset.filter(role_id__type="Custom").count()
             admin_users = queryset.filter(role_id__type="System").count()
 
@@ -84,7 +86,7 @@ class UserListCreateView(generics.ListCreateAPIView):
                     "success": True,
                     "message": "User created successfully.",
                     "status_code": status.HTTP_201_CREATED,
-                    "data": TblUserSerializer(user).data,
+                    # "data": TblUserSerializer(user).data,
                 },
                 status=status.HTTP_201_CREATED,
             )

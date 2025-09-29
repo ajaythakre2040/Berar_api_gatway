@@ -10,9 +10,8 @@ class VendorManagement(models.Model):
     max_retries = models.IntegerField(default=3)
     api_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     secret_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
-    status = models.CharField(max_length=50, default="Active")
+    status = models.BooleanField(default=False)
 
-    internal_name = models.CharField(max_length=255,unique=True)              
     max_retries = models.IntegerField(default=3)    
     error_rate = models.FloatField(default=0.0)
     health_score = models.FloatField(default=0.0)

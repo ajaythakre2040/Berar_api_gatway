@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from constant import STATUS_ACTIVE
 from kyc_api_gateway.models.client_management import ClientManagement
 from kyc_api_gateway.serializers.client_management_serializer import ClientManagementSerializer
 from rest_framework.permissions import IsAuthenticated
@@ -19,8 +20,7 @@ class ClientManagementListCreate(APIView):
         search_query = request.GET.get("search", "").strip()
         
         clients = ClientManagement.objects.filter(deleted_at__isnull=True)
-
-        
+       
         if search_query:
             clients = clients.filter(
                 Q(company_name__icontains=search_query) |
@@ -34,15 +34,14 @@ class ClientManagementListCreate(APIView):
         paginator = CustomPagination()
         page = paginator.paginate_queryset(clients, request)
         serializer = ClientManagementSerializer(page, many=True)
-
-        total_clients = clients.count()
+        
 
         return paginator.get_custom_paginated_response(
             data=serializer.data,
             extra_fields={
                 "success": True,
                 "message": "Client list retrieved successfully.",
-                "total_clients": total_clients,
+               
             },
         )
 
@@ -82,7 +81,7 @@ class ClientManagementDetail(APIView):
         client = get_object_or_404(ClientManagement, pk=pk, deleted_at__isnull=True)
         serializer = ClientManagementSerializer(client, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save(updated_by=request.user.id)
+            serializer.save(updated_by=request.user.id,updated_at=timezone.now())
             return Response(
                 {"success": True, "message": "Client updated successfully."},
                 status=status.HTTP_200_OK,
@@ -109,10 +108,8 @@ class ClientAllCount(APIView):
     def get(self, request):
         try:
             total_client = ClientManagement.objects.filter(deleted_at__isnull=True).count()
-
-            total_active_client = ClientManagement.objects.filter(
-                account_status="Active", deleted_at__isnull=True
-            ).count()
+            
+            total_active_client = ClientManagement.objects.filter(deleted_at__isnull=True,status=STATUS_ACTIVE).count()
 
             total_api = ApiManagement.objects.filter(deleted_at__isnull=True).count()
 

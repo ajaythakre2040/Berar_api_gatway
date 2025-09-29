@@ -42,7 +42,7 @@ urlpatterns = [
         VendorManagementDetail.as_view(),
         name="client_management_detail",
     ),
-    path("vendor_active_count/", VendorAllCount.as_view(), name="Vendor_all_count"),
+    path("vendor_count/", VendorAllCount.as_view(), name="Vendor_all_count"),
     path("vendors_api_list/", VendorApiList.as_view(), name="vendor_api_list"),
     path("api_management/", ApiManagementListCreate.as_view(), name="api_list_create"),
     path("api_management/<int:pk>/", ApiManagementDetail.as_view(), name="api_detail"),

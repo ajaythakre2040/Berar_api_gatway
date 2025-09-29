@@ -97,7 +97,7 @@ class ApiManagementDetail(APIView):
 
         serializer = ApiManagementSerializer(api, data=request.data, partial=True)
         if serializer.is_valid():
-                serializer.save(updated_by=request.user.id)
+                serializer.save(updated_by=request.user.id,updated_at=timezone.now())
                 return Response(
                     {
                         "success": True,

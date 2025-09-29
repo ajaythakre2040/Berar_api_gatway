@@ -7,6 +7,8 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 
+from constant import STATUS_PENDING, USER_STATUS_CHOICES
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -67,7 +69,10 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
         db_column="role_id",
     )
 
-    status = models.IntegerField(default=0)
+    status = models.IntegerField(
+                choices=USER_STATUS_CHOICES,  # choices optional, sirf admin panel ke liye
+                default=STATUS_PENDING
+            )    
     timezone = models.CharField(max_length=255, default="UTC",blank=True, null=True)
     timeout = models.CharField(
         default="30", max_length=100

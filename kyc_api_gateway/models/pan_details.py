@@ -62,7 +62,7 @@ class PanDetails(models.Model):
 
     # 🔹 Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     updated_by = models.IntegerField(null=True, blank=True)
     deleted_by = models.IntegerField(null=True, blank=True)

@@ -9,10 +9,21 @@ ADMIN_USER = {
     "role_id": 1,                   # must exist in Role table
     "department_id": 1           # or a valid department ID
 }
+# Status codes as integers
+STATUS_ACTIVE = 1
+STATUS_INACTIVE = 2
+STATUS_SUSPENDED = 3
+STATUS_PENDING = 4
+STATUS_LOCKED = 5
+
+# Optional mapping for labels (sirf display ke liye)
 USER_STATUS = {
-    1: "Active",
-    2: "Inactive",
-    3: "Suspended",
-    4: "Pending",
-    5: "Locked",
+    STATUS_ACTIVE: "Active",
+    STATUS_INACTIVE: "Inactive",
+    STATUS_SUSPENDED: "Suspended",
+    STATUS_PENDING: "Pending",
+    STATUS_LOCKED: "Locked",
 }
+
+# Choices tuple for Django model
+USER_STATUS_CHOICES = tuple(USER_STATUS.items())
