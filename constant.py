@@ -24,3 +24,4 @@ USER_STATUS = {
     4: "Pending",
     5: "Locked",
 }
+USER_STATUS_CHOICES = [(k, v) for k, v in USER_STATUS.items()]
