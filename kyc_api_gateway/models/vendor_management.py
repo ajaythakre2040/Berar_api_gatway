@@ -7,7 +7,8 @@ class VendorManagement(models.Model):
     contact_email = models.EmailField(max_length=255, unique=True)
     priority = models.IntegerField(default=30, unique=True)
     timeout = models.IntegerField(default=30)
-   
+    header = models.CharField(max_length=255, null=True, blank=True)
+    
     api_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     secret_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     status = models.BooleanField(default=False)
