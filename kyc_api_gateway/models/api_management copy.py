@@ -2,30 +2,14 @@ from django.db import models
 from kyc_api_gateway.models.vendor_management import VendorManagement
 
 
-# models/api_management.py
-
-
 class ApiManagement(models.Model):
     api_name = models.CharField(max_length=255, unique=True)
     endpoint_path = models.CharField(max_length=255, unique=True)
     http_method = models.CharField(max_length=10)
+
     supported_vendors = models.ManyToManyField(
-        VendorManagement,
-        through="SupportedVendor",
-        related_name="supported_apis",
-        blank=True,
+        VendorManagement, related_name="supported_apis", blank=True
     )
-    # supported_vendors = models.ManyToManyField(
-    #     VendorManagement,
-    #     through="SupportedVendor",  # 👈 Custom through model
-    #     related_name="supported_apis",
-    #     blank=True,
-    # )
-    # supported_vendors = models.ManyToManyField(
-    #     VendorManagement,
-    #     related_name="supported_apis",
-    #     blank=True,
-    # )
 
     vendor = models.ForeignKey(
         VendorManagement,

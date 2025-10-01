@@ -3,15 +3,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q
 
-from auth_system.permissions.token_valid import IsTokenValid
+from rest_framework.permissions import IsAuthenticated
+from auth_system.permissions.token_valid import IsTokenValid  
+
 from kyc_api_gateway.models.api_management import ApiManagement
-from kyc_api_gateway.serializers.api_management_serializer import (
-    ApiManagementSerializer,
-)
+from kyc_api_gateway.models.vendor_management import VendorManagement
+from kyc_api_gateway.serializers.api_management_serializer import ApiManagementSerializer
 from auth_system.utils.pagination import CustomPagination
+from django.db.models import Q
 
 
 class ApiManagementListCreate(APIView):
@@ -19,6 +19,7 @@ class ApiManagementListCreate(APIView):
 
     def get(self, request):
         search_query = request.GET.get("search", "").strip()
+
         apis = ApiManagement.objects.filter(deleted_at__isnull=True)
 
         if search_query:
@@ -31,6 +32,7 @@ class ApiManagementListCreate(APIView):
 
         apis = apis.order_by("id")
 
+        
         paginator = CustomPagination()
         page = paginator.paginate_queryset(apis, request)
         serializer = ApiManagementSerializer(page, many=True)
@@ -49,13 +51,11 @@ class ApiManagementListCreate(APIView):
                 "disabled_apis": disabled_apis,
             },
         )
-
+    
     def post(self, request):
-        serializer = ApiManagementSerializer(
-            data=request.data, context={"request": request}
-        )
+        serializer = ApiManagementSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(created_by=request.user.id)
             return Response(
                 {
                     "success": True,
@@ -91,28 +91,29 @@ class ApiManagementDetail(APIView):
             status=status.HTTP_200_OK,
         )
 
+
     def patch(self, request, pk):
         api = self.get_object(pk)
-        serializer = ApiManagementSerializer(
-            api, data=request.data, partial=True, context={"request": request}
-        )
+
+        serializer = ApiManagementSerializer(api, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {
-                    "success": True,
-                    "message": "API updated successfully.",
-                },
-                status=status.HTTP_200_OK,
-            )
+                serializer.save(updated_by=request.user.id,updated_at=timezone.now())
+                return Response(
+                    {
+                        "success": True,
+                        "message": "API updated successfully.",
+                    },
+                    status=status.HTTP_200_OK,
+                )
         return Response(
-            {
-                "success": False,
-                "message": "Failed to update API.",
-                "errors": serializer.errors,
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+                {
+                    "success": False,
+                    "message": "Failed to update API.",
+                    "errors": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
 
     def delete(self, request, pk):
         api = self.get_object(pk)
@@ -129,9 +130,9 @@ class ApiManagementDetail(APIView):
 
 
 class ApiManagementList(APIView):
-    permission_classes = [IsAuthenticated, IsTokenValid]
+      permission_classes = [IsAuthenticated, IsTokenValid]
 
-    def get(self, request):
+      def get(self, request):
         apis = ApiManagement.objects.filter(deleted_at__isnull=True).order_by("id")
         serializer = ApiManagementSerializer(apis, many=True)
         return Response(

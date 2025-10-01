@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
+
 class VendorManagement(models.Model):
     vendor_name = models.CharField(max_length=255, unique=True)
     base_url = models.CharField(max_length=255, unique=True)
@@ -8,24 +9,19 @@ class VendorManagement(models.Model):
     priority = models.IntegerField(default=30, unique=True)
     timeout = models.IntegerField(default=30)
     header = models.CharField(max_length=255, null=True, blank=True)
-    
     api_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     secret_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     status = models.BooleanField(default=False)
-
-    max_retries = models.IntegerField(default=3)    
+    max_retries = models.IntegerField(default=3)
     error_rate = models.FloatField(default=0.0)
     health_score = models.FloatField(default=0.0)
     response_time = models.FloatField(default=0.0)
     downtime = models.FloatField(default=0.0)
-    secret_key = models.CharField(max_length=255, unique=True, null=True, blank=True)              
-
-
+    secret_key = models.CharField(max_length=255, unique=True, null=True, blank=True)
     end_point_production = models.CharField(max_length=255, null=True, blank=True)
     end_point_uat = models.CharField(max_length=255, null=True, blank=True)
     production_key = models.CharField(max_length=255, null=True, blank=True)
     uat_key = models.CharField(max_length=255, null=True, blank=True)
-
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.IntegerField(null=True, blank=True)
