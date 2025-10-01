@@ -20,6 +20,8 @@ class VendorManagementListCreate(APIView):
     def get(self, request):
         search_query = request.GET.get("search", "").strip()
         vendors = VendorManagement.objects.filter(deleted_at__isnull=True)
+        total_vendor = vendors.count()
+        total_active_vendor = vendors.filter(status=STATUS_ACTIVE).count()
 
         if search_query:
             vendors = vendors.filter(
@@ -36,14 +38,15 @@ class VendorManagementListCreate(APIView):
         page = paginator.paginate_queryset(vendors, request)
         serializer = VendorManagementSerializer(page, many=True)
 
-        # total_vendors = vendors.count()
+        
 
         return paginator.get_custom_paginated_response(
             data=serializer.data,
             extra_fields={
                 "success": True,
                 "message": "Vendor list retrieved successfully.",
-                # "total_vendors": total_vendors,
+                "total_vendor": total_vendor,
+                "total_active_vendor": total_active_vendor,
             },
         )
 
@@ -109,40 +112,40 @@ class VendorManagementDetail(APIView):
         )
 
 
-class VendorAllCount(APIView):
-    permission_classes = [IsTokenValid, IsAuthenticated]
+# class VendorAllCount(APIView):
+#     permission_classes = [IsTokenValid, IsAuthenticated]
 
-    def get(self, request):
-        try:
-            total_vendor = VendorManagement.objects.filter(
-                deleted_at__isnull=True
-            ).count()
+#     def get(self, request):
+#         try:
+#             total_vendor = VendorManagement.objects.filter(
+#                 deleted_at__isnull=True
+#             ).count()
 
-            total_active_vendor = VendorManagement.objects.filter(
-               status=STATUS_ACTIVE, deleted_at__isnull=True
-            ).count()
+#             total_active_vendor = VendorManagement.objects.filter(
+#                status=STATUS_ACTIVE, deleted_at__isnull=True
+#             ).count()
 
-            return Response(
-                {
-                    "success": True,
-                    "message": " All Counts retrieved successfully.",
-                    "data": {
-                        "total_vendor": total_vendor,
-                        "total_active_vendor": total_active_vendor,
-                    },
-                },
-                status=status.HTTP_200_OK,
-            )
+#             return Response(
+#                 {
+#                     "success": True,
+#                     "message": " All Counts retrieved successfully.",
+#                     "data": {
+#                         "total_vendor": total_vendor,
+#                         "total_active_vendor": total_active_vendor,
+#                     },
+#                 },
+#                 status=status.HTTP_200_OK,
+#             )
 
-        except Exception as e:
-            return Response(
-                {
-                    "success": False,
-                    "message": "Failed to fetch counts.",
-                    "errors": str(e),
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+#         except Exception as e:
+#             return Response(
+#                 {
+#                     "success": False,
+#                     "message": "Failed to fetch counts.",
+#                     "errors": str(e),
+#                 },
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             )
 
 
 class VendorApiList(APIView):

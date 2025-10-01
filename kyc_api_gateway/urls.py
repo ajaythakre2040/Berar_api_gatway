@@ -3,13 +3,14 @@ from django.urls import path
 from kyc_api_gateway.views.client_management_view import (
 
      ClientManagementListCreate, ClientManagementDetail,
-     ClientAllCount,
+    #  ClientAllCount,
 )
 
 from kyc_api_gateway.views.vendor_management_view import (
 
      VendorManagementListCreate, VendorManagementDetail,
-     VendorAllCount,VendorApiList
+    #  VendorAllCount,
+     VendorApiList,
 )
 
 from kyc_api_gateway.views.api_management_view import (
@@ -31,7 +32,7 @@ urlpatterns = [
         ClientManagementDetail.as_view(),
         name="client_management_detail",
     ),
-    path("client_count/", ClientAllCount.as_view(), name="client_count"),
+    # path("client_count/", ClientAllCount.as_view(), name="client_count"),
     path(
         "vendors_management/",
         VendorManagementListCreate.as_view(),
@@ -42,7 +43,7 @@ urlpatterns = [
         VendorManagementDetail.as_view(),
         name="client_management_detail",
     ),
-    path("vendor_count/", VendorAllCount.as_view(), name="Vendor_all_count"),
+    # path("vendor_count/", VendorAllCount.as_view(), name="Vendor_all_count"),
     path("vendors_api_list/", VendorApiList.as_view(), name="vendor_api_list"),
     path("api_management/", ApiManagementListCreate.as_view(), name="api_list_create"),
     path("api_management/<int:pk>/", ApiManagementDetail.as_view(), name="api_detail"),
