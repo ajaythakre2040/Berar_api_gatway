@@ -22,9 +22,14 @@ class ApiManagementSerializer(serializers.ModelSerializer):
             "deleted_at",
         )
 
-    def get_supported_vendor_ids(self, obj):
-        return list(obj.supported_vendors.values_list("id", flat=True))
+    
 
+    def get_supported_vendor_ids(self, obj):
+        return list(
+            SupportedVendor.objects.filter(api=obj, deleted_at__isnull=True).values_list(
+                "vendor_id", flat=True
+            )
+        )
     def create(self, validated_data):
         supported_vendors = validated_data.pop("supported_vendors", [])
         user_id = self.context["request"].user.id
@@ -58,16 +63,16 @@ class ApiManagementSerializer(serializers.ModelSerializer):
 
         # return instance
         for vendor_id in supported_vendors:
-                    existing = SupportedVendor.objects.filter(api=instance, vendor_id=vendor_id).first()
-                    if existing:
-                        # Reactivate if it was soft-deleted
-                        existing.deleted_at = None
-                        existing.deleted_by = None
-                        existing.updated_by = user_id
-                        existing.updated_at = timezone.now()
-                        existing.save()
-                    else:
-                        SupportedVendor.objects.create(
+            existing = SupportedVendor.objects.filter(api=instance, vendor_id=vendor_id).first()
+            if existing:
+                # Reactivate if it was soft-deleted
+                existing.deleted_at = None
+                existing.deleted_by = None
+                existing.updated_by = user_id
+                existing.updated_at = timezone.now()
+                existing.save()
+            else:
+                SupportedVendor.objects.create(
                             api=instance,
                             vendor_id=vendor_id,
                             created_by=user_id
