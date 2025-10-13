@@ -15,7 +15,8 @@ class ClientManagement(models.Model):
     account_status = models.CharField(max_length=100)            
     risk_level = models.CharField(max_length=100)               
     compliance_level = models.CharField(max_length=100)          
-
+    uat_key = models.CharField(max_length=255, unique=True, null=True,)
+    prod_key = models.CharField(max_length=255, unique=True, null=True,)
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.IntegerField(null=True, blank=True)

@@ -22,7 +22,7 @@ class VendorManagement(models.Model):
     end_point_uat = models.CharField(max_length=255, null=True, blank=True)
     production_key = models.CharField(max_length=255, null=True, blank=True)
     uat_key = models.CharField(max_length=255, null=True, blank=True)
-
+    header=models.CharField(max_length=255, null=True, blank=True)
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.IntegerField(null=True, blank=True)
@@ -32,18 +32,16 @@ class VendorManagement(models.Model):
 
     class Meta:
         db_table = "kyc_vendor_management"
-        ordering = ["priority"]  # default ordering by priority
+        ordering = ["priority"]  
 
     def __str__(self):
         return self.vendor_name
 
-    # Optional: Soft delete method
     def soft_delete(self, user_id):
         self.deleted_at = timezone.now()
         self.deleted_by = user_id
         self.save()
 
-    # Optional: Check if vendor is active (not deleted and status active)
     @property
     def is_active(self):
         return self.status.lower() == "active" and self.deleted_at is None
