@@ -9,6 +9,14 @@ ADMIN_USER = {
     "role_id": 1,  # Role will be created and assigned if missing
     "department_id": 1,  # Optional, safe to skip
 }
+# Status codes as integers
+STATUS_ACTIVE = 1
+STATUS_INACTIVE = 2
+STATUS_SUSPENDED = 3
+STATUS_PENDING = 4
+STATUS_LOCKED = 5
+
+# Optional mapping for labels (sirf display ke liye)
 USER_STATUS = {
     1: "Active",
     2: "Inactive",
@@ -16,3 +24,4 @@ USER_STATUS = {
     4: "Pending",
     5: "Locked",
 }
+USER_STATUS_CHOICES = [(k, v) for k, v in USER_STATUS.items()]

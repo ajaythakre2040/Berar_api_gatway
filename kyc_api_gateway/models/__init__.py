@@ -35,3 +35,4 @@ from .pro_bill_details import ProElectricityBill
 from .pro_bill_request_log import ProBillRequestLog
 
 
+from .supported_vendor import SupportedVendor

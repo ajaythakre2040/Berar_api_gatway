@@ -12,6 +12,8 @@ class KycClientServicesManagement(models.Model):
         related_name="kyc_services",
         on_delete=models.CASCADE
     )
+    priority = models.IntegerField(default=30, unique=True)
+
     status = models.BooleanField(default=True)
 
     created_by = models.IntegerField()
@@ -23,6 +25,6 @@ class KycClientServicesManagement(models.Model):
 
     class Meta:
         db_table = "kyc_client_services_management"
-
+        ordering = ["priority"]  # default ordering by priority
     def __str__(self):
         return f"{self.client} → {self.myservice} ({self.status})"
