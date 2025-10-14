@@ -126,7 +126,7 @@ AUTH_USER_MODEL = "auth_system.TblUser"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "db_berar_api_gateway1",
+        "NAME": "db_berar_api_gateway",
         "USER": "postgres",
         "PASSWORD": "root",
         "HOST": "localhost",

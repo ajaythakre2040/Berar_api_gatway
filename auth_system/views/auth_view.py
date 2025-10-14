@@ -18,37 +18,6 @@ from django.db.models import Q
 User = get_user_model()
 
 
-# class RegisterView(generics.CreateAPIView):
-#     queryset = TblUser.objects.all()
-#     serializer_class = TblUserSerializer
-#     permission_classes = [AllowAny]
-
-#     def post(self, request, *args, **kwargs):
-#         serializer = self.get_serializer(data=request.data)
-#         if serializer.is_valid():
-#             user = serializer.save()
-#             user.created_by = request.user.id
-#             user.save()
-#             return Response(
-#                 {
-#                     "success": True,
-#                     "status_code": status.HTTP_201_CREATED,
-#                     "message": "User registered successfully.",
-#                     "user": TblUserSerializer(user).data,
-#                 },
-#                 status=status.HTTP_201_CREATED,
-#             )
-#         return Response(
-#             {
-#                 "success": False,
-#                 "status_code": status.HTTP_400_BAD_REQUEST,
-#                 "message": "Registration failed.",
-#                 "errors": serializer.errors,
-#             },
-#             status=status.HTTP_400_BAD_REQUEST,
-#         )
-
-
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -67,10 +36,9 @@ class LoginView(APIView):
             )
 
         try:
-            
 
             user = User.objects.get(Q(email=username) | Q(username=username))
-            
+
         except User.DoesNotExist:
             return Response(
                 {
