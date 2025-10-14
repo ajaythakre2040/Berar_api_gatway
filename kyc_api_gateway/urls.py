@@ -16,6 +16,17 @@ from kyc_api_gateway.views.api_management_view import (
      ApiManagementList
 )
 
+from kyc_api_gateway.views.kyc_my_services_view import (
+    KycMyServicesListCreate,
+    KycMyServicesDetail,
+)
+
+from kyc_api_gateway.views.kyc_client_services_management_view import (
+    KycClientServicesListCreate,
+    KycClientServicesDetail,
+)
+
+
 from kyc_api_gateway.views.uat.pan_details_view import PanUatDetailsAPIView
 
 # from kyc_api_gateway.views.pro.pan_details_view import PanProductionDetailsAPIView
@@ -29,29 +40,22 @@ from kyc_api_gateway.views.uat.voter_details_view import VoterUatAPIView
 from kyc_api_gateway.views.uat.rc_detailsi_view import RcUatAPIView
 
 
+
 urlpatterns = [
-    path(
-        "client_management/",
-        ClientManagementListCreate.as_view(),
-        name="client_management_list_create",
-    ),
-    path(
-        "client_management/<int:pk>/",
-        ClientManagementDetail.as_view(),
-        name="client_management_detail",
-    ),
+    path("client_management/",ClientManagementListCreate.as_view(), name="client_management_list_create",),
+    path("client_management/<int:pk>/", ClientManagementDetail.as_view(), name="client_management_detail",),
     # path("client_count/", ClientAllCount.as_view(), name="client_count"),
-    path(
-        "vendors_management/",
-        VendorManagementListCreate.as_view(),
-        name="client_management_list_create",
-    ),
-    path(
-        "vendors_management/<int:pk>/",
-        VendorManagementDetail.as_view(),
-        name="client_management_detail",
-    ),
+
+    path("vendors_management/",VendorManagementListCreate.as_view(), name="client_management_list_create",),
+    path("vendors_management/<int:pk>/",VendorManagementDetail.as_view(),name="client_management_detail",),
+
+    path("kyc_my_services/",KycMyServicesListCreate.as_view(), name="kyc_my_services_list"),
+    path("kyc_my_services/<int:pk>/", KycMyServicesDetail.as_view(), name="kyc_my_services_detail"),
     
+    path("kyc_client_services/", KycClientServicesListCreate.as_view(), name="kyc_client_services_list"),
+    path("kyc_client_services/<int:pk>/", KycClientServicesDetail.as_view(), name="kyc_client_services_detail"),
+
+
     #uat
     # path("vendor_active_count/", VendorAllCount.as_view(), name="Vendor_all_count"),
     path("vendors_api_list/", VendorApiList.as_view(), name="vendor_api_list"),

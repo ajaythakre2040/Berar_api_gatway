@@ -135,7 +135,7 @@ class UserDetailUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
                     "success": True,
                     "message": "User updated successfully.",
                     "status_code": status.HTTP_200_OK,
-                    "data": serializer.data,
+                    # "data": serializer.data,
                 },
                 status=status.HTTP_200_OK,
             )
