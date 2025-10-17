@@ -25,3 +25,4 @@ USER_STATUS = {
     5: "Locked",
 }
 USER_STATUS_CHOICES = [(k, v) for k, v in USER_STATUS.items()]
+MAX_LOGIN_ATTEMPTS = 5

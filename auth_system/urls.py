@@ -6,6 +6,9 @@ from rest_framework_simplejwt.views import (
 from auth_system.views.auth_view import (
     LoginView,
     LogoutView,
+    ForgotPasswordView,
+    ResetPasswordConfirmView,
+    ChangePasswordView,
 )
 from auth_system.views.menu_view import (
     MenuDetailView,
@@ -31,6 +34,13 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("login/", LoginView.as_view(), name="user-login"),
     path("logout/", LogoutView.as_view(), name="user-logout"),
+    path("forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
+    path(
+        "reset-password-confirm/",
+        ResetPasswordConfirmView.as_view(),
+        name="reset-password-confirm",
+    ),
+    path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path("users/", UserListCreateView.as_view(), name="user-list"),
     path(
         "users/<int:id>/",

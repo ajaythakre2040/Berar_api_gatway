@@ -28,14 +28,21 @@ def validate_password(password):
 
     if len(password) < 8:
         errors.append("Password must be at least 8 characters long.")
+
     if not re.search(r"[A-Z]", password):
         errors.append("Password must contain at least one uppercase letter.")
+
     if not re.search(r"[a-z]", password):
         errors.append("Password must contain at least one lowercase letter.")
+
     if not re.search(r"\d", password):
         errors.append("Password must contain at least one digit.")
+
     if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
         errors.append("Password must contain at least one special character.")
+
+    if not password[0].isupper():
+        errors.append("Password must start with a capital letter.")
 
     try:
         common_validator = CommonPasswordValidator()

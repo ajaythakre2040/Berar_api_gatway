@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-$1p36)ds5tc_*r+#ohq7rw5$+01lri-^-(63#y_*q0d=$2$4!k"
-SECRET_KEY = 'django-insecure-#7x6*89t3f^ddvb618%9+0d0@vpn4nry&2dk3tinpevv1vn03q'
+SECRET_KEY = "django-insecure-#7x6*89t3f^ddvb618%9+0d0@vpn4nry&2dk3tinpevv1vn03q"
 API_KARZA_KEY = config("API_KARZA_KEY")
 API_SAND_KEY = config("API_SAND_KEY")
 API_SMS_KEY = config("API_SMS_KEY")
@@ -66,6 +66,17 @@ INSTALLED_APPS = [
     "kyc_api_gateway",
 ]
 
+EMAIL_BACKEND = config("EMAIL_BACKEND")
+EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_PORT = config("EMAIL_PORT", cast=int)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+FRONTEND_RESET_PASSWORD_URL = config("FRONTEND_RESET_PASSWORD_URL")
+
+
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Required to be first
     "django.middleware.security.SecurityMiddleware",
@@ -85,8 +96,17 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",  # ✅ This stays
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "1000/day",
+        "anon": "100/day",
+        "forgot_password": "30/hour",
+        "change_password": "10/hour",
+    },
 }
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),

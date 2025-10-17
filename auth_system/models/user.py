@@ -51,15 +51,9 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
     )
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=255, unique=True)
-    # role_id = models.ForeignKey(  # ek default vendor
-    #     Role,
-    #     related_name="users_role",
-    #     on_delete=models.SET_NULL,
-    #     null=True,
-    #     blank=True,
-    # )
+
     role_id = models.ForeignKey(
-        "auth_system.Role",  # <-- string reference avoids circular import
+        "auth_system.Role",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -68,12 +62,10 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
     )
 
     status = models.IntegerField(default=0)
-    timezone = models.CharField(max_length=255, default="UTC",blank=True, null=True)
-    timeout = models.CharField(
-        default="30", max_length=100
-    )  # Changed to CharField with max_length
-    department =models.ForeignKey(
-        "auth_system.Department",  # <-- string reference avoids circular import
+    timezone = models.CharField(max_length=255, default="UTC", blank=True, null=True)
+    timeout = models.CharField(default="30", max_length=100)
+    department = models.ForeignKey(
+        "auth_system.Department",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -81,11 +73,12 @@ class TblUser(AbstractBaseUser, PermissionsMixin):
         db_column="department_id",
     )
     position = models.CharField(max_length=255)
-
+    login_attempts = models.IntegerField(default=0)
+    is_login= models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-
+    # login_attempts = models.IntegerField(default=0)
     created_by = models.IntegerField(null=True, blank=True)
     updated_by = models.IntegerField(null=True, blank=True)
     deleted_by = models.IntegerField(null=True, blank=True)

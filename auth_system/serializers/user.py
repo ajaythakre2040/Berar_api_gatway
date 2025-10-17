@@ -6,7 +6,6 @@ from auth_system.models.user import TblUser
 class TblUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
 
-    # ✅ New fields for your requirement
     role_type = serializers.CharField(source="role_id.type", read_only=True)
     role_name = serializers.CharField(source="role_id.role_name", read_only=True)
     department_name = serializers.CharField(source="department.name", read_only=True)
