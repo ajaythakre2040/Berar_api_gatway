@@ -6,12 +6,6 @@ class ApiManagement(models.Model):
     api_name = models.CharField(max_length=255, unique=True)
     endpoint_path = models.CharField(max_length=255, unique=True)
     http_method = models.CharField(max_length=10)
-    # supported_vendors = models.ManyToManyField(
-    #     VendorManagement,
-    #     through="SupportedVendor",
-    #     related_name="supported_apis",
-    #     blank=True,
-    # )
 
     vendor = models.ForeignKey(
         VendorManagement,

@@ -28,7 +28,7 @@ class KycVendorPriority(models.Model):
     class Meta:
         db_table = "kyc_vendor_priority"
         ordering = ["priority"]
-        unique_together = ("client", "vendor", "my_service")  # Prevent duplicates
+        unique_together = ("client", "vendor", "my_service")  
 
     def __str__(self):
         return f"{self.client} → {self.my_service} (Priority: {self.priority})"

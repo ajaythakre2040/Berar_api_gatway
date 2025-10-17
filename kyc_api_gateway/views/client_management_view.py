@@ -114,38 +114,3 @@ class ClientManagementDetail(APIView):
             {"success": True, "message": "Client deleted successfully."},
             status=status.HTTP_200_OK,
         )
-
-
-# class ClientAllCount(APIView):
-#     permission_classes = [IsTokenValid, IsAuthenticated]
-
-#     def get(self, request):
-#         try:
-#             total_client = ClientManagement.objects.filter(deleted_at__isnull=True).count()
-
-#             total_active_client = ClientManagement.objects.filter(deleted_at__isnull=True,status=STATUS_ACTIVE).count()
-
-#             total_api = ApiManagement.objects.filter(deleted_at__isnull=True).count()
-
-#             return Response(
-#                 {
-#                     "success": True,
-#                     "message": " All Counts retrieved successfully.",
-#                     "data": {
-#                         "total_client": total_client,
-#                         "total_active_client": total_active_client,
-#                         "total_api": total_api,
-#                     },
-#                 },
-#                 status=status.HTTP_200_OK,
-#             )
-
-#         except Exception as e:
-#             return Response(
-#                 {
-#                     "success": False,
-#                     "message": "Failed to fetch counts.",
-#                     "errors": str(e),
-#                 },
-#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             )

@@ -38,109 +38,109 @@ User = get_user_model()
 token_generator = PasswordResetTokenGenerator()
 
 
-# class LoginView(APIView):
-#     permission_classes = [AllowAny]
-
-#     def post(self, request):
-#         username = request.data.get("username")
-#         password = request.data.get("password")
-
-#         if not username or not password:
-#             return Response(
-#                 {
-#                     "success": False,
-#                     "status_code": status.HTTP_400_BAD_REQUEST,
-#                     "message": "Email (username) and password are required.",
-#                 },
-#                 status=status.HTTP_400_BAD_REQUEST,
-#             )
-
-#         try:
-
-#             user = User.objects.get(Q(email=username) | Q(username=username))
-
-#         except User.DoesNotExist:
-#             return Response(
-#                 {
-#                     "success": False,
-#                     "status_code": status.HTTP_404_NOT_FOUND,
-#                     "message": "username not found.",
-#                 },
-#                 status=status.HTTP_404_NOT_FOUND,
-#             )
-#         if user.login_attempt >= MAX_LOGIN_ATTEMPTS:
-#             return Response(
-#                         {
-#                             "status": "error",
-#                             "status_code": status.HTTP_403_FORBIDDEN,
-#                             "message": "Account locked. Try later.",
-#                         },
-#                         status=status.HTTP_403_FORBIDDEN,
-#                     )
-#         if not user.check_password(password):
-#             return Response(
-#                 {
-#                     "success": False,
-#                     "status_code": status.HTTP_401_UNAUTHORIZED,
-#                     "message": "Incorrect password.",
-#                 },
-#                 status=status.HTTP_401_UNAUTHORIZED,
-#             )
-
-#         if not user.is_active:
-#             return Response(
-#                 {
-#                     "success": False,
-#                     "status_code": status.HTTP_403_FORBIDDEN,
-#                     "message": "User account is disabled.",
-#                 },
-#                 status=status.HTTP_403_FORBIDDEN,
-#             )
-
-#         tokens = generate_tokens_for_user(user)
-
-#         ip, agent = get_client_ip_and_agent(request)
-#         user.login_attempt = 0
-#         user.is_login = True
-#         user.save()
-#         access_token = tokens["access"]
-#         refresh_token = tokens["refresh"]
-
-#         LoginSession.objects.create(
-#             user=user,
-#             token=access_token,
-#             is_active=True,
-#             login_at=timezone.now(),
-#             expiry_at=refresh_token_expiry_time(),
-#             ip_address=ip,
-#             agent_browser=agent,
-#             request_headers=dict(request.headers),
-#         )
 
 
-#         return Response(
-#             {
-#                 "success": True,
-#                 "message": "Login successful.",
-#                 "status_code": status.HTTP_200_OK,
-#                 "accessToken": tokens.get("access"),
-#                 "refreshToken": tokens.get("refresh"),
-#             },
-#             status=status.HTTP_200_OK,
-#         )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def is_valid_mobile(identifier: str) -> bool:
     pattern = r"^\+?1?\d{9,15}$"
     return bool(re.match(pattern, identifier))
 
 
-# Helper: retrieve user by identifier (mobile/email/username)
+
 def get_user_by_identifier(identifier: str):
     if is_valid_mobile(identifier):
         return TblUser.objects.filter(mobile_number=identifier).first()
     return TblUser.objects.filter(Q(email=identifier) | Q(username=identifier)).first()
 
 
-# Helper: log failed login attempts
+
 def log_failed_attempt(username, ip, agent, reason):
     LoginFailAttempts.objects.create(
         username=username,
@@ -222,7 +222,7 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Success: reset attempts & update status
+        
         user.login_attempts = 0
         user.is_login = True
         user.save()
@@ -290,7 +290,7 @@ class LogoutView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # Verify that logout request's IP and agent match login session's details
+            
             if session.ip_address != ip or session.agent_browser != agent:
                 return Response(
                     {
@@ -301,16 +301,16 @@ class LogoutView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            # Mark session as inactive and record logout time
+            
             session.is_active = False
             session.logout_at = timezone.now()
             session.save()
 
-            # Blacklist tokens to invalidate them
+            
             blacklist_token(refresh_token, token_type="refresh", user=request.user)
             blacklist_token(access_token, token_type="access", user=request.user)
 
-            # Update user's login status
+            
             user = request.user
             user.is_login = False
             user.save(update_fields=["is_login"])

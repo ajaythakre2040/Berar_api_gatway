@@ -5,7 +5,9 @@ from django.utils import timezone
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from kyc_api_gateway.models import KycVendorPriority
-from kyc_api_gateway.serializers.Kyc_vendor_priority_serializer import KycVendorPrioritySerializer
+from kyc_api_gateway.serializers.Kyc_vendor_priority_serializer import (
+    KycVendorPrioritySerializer,
+)
 from auth_system.permissions.token_valid import IsTokenValid
 from auth_system.utils.pagination import CustomPagination
 
@@ -19,9 +21,9 @@ class KycVendorPriorityListCreate(APIView):
 
         if search_query:
             records = records.filter(
-                Q(client__name__icontains=search_query) |
-                Q(vendor__vendor_name__icontains=search_query) |  #
-                Q(my_service__name__icontains=search_query)
+                Q(client__name__icontains=search_query)
+                | Q(vendor__vendor_name__icontains=search_query)
+                | Q(my_service__name__icontains=search_query)
             )
 
         records = records.order_by("priority")
@@ -39,7 +41,7 @@ class KycVendorPriorityListCreate(APIView):
         )
 
     def post(self, request):
-        # print("this is request data",request.data)
+
         serializer = KycVendorPrioritySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(created_by=request.user.id)
@@ -48,37 +50,61 @@ class KycVendorPriorityListCreate(APIView):
                 status=status.HTTP_201_CREATED,
             )
         return Response(
-            {"success": False, "message": "Failed to create vendor priority.", "errors": serializer.errors},
+            {
+                "success": False,
+                "message": "Failed to create vendor priority.",
+                "errors": serializer.errors,
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
- 
+
 
 class KycVendorPriorityDetail(APIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
 
     def get(self, request, pk):
-        record = KycVendorPriority.objects.filter(pk=pk, deleted_at__isnull=True).first()
+        record = KycVendorPriority.objects.filter(
+            pk=pk, deleted_at__isnull=True
+        ).first()
         if not record:
-            return Response({"success": False, "message": "Record not found."}, status=404)
+            return Response(
+                {"success": False, "message": "Record not found."}, status=404
+            )
         serializer = KycVendorPrioritySerializer(record)
         return Response({"success": True, "data": serializer.data}, status=200)
 
     def patch(self, request, pk):
-        record = KycVendorPriority.objects.filter(pk=pk, deleted_at__isnull=True).first()
+        record = KycVendorPriority.objects.filter(
+            pk=pk, deleted_at__isnull=True
+        ).first()
         if not record:
-            return Response({"success": False, "message": "Record not found."}, status=404)
+            return Response(
+                {"success": False, "message": "Record not found."}, status=404
+            )
 
-        serializer = KycVendorPrioritySerializer(record, data=request.data, partial=True)
+        serializer = KycVendorPrioritySerializer(
+            record, data=request.data, partial=True
+        )
         if serializer.is_valid():
             serializer.save(updated_by=request.user.id, updated_at=timezone.now())
-            return Response({"success": True, "message": "Vendor priority updated successfully."}, status=200)
+            return Response(
+                {"success": True, "message": "Vendor priority updated successfully."},
+                status=200,
+            )
         return Response({"success": False, "errors": serializer.errors}, status=400)
 
     def delete(self, request, pk):
-        record = KycVendorPriority.objects.filter(pk=pk, deleted_at__isnull=True).first()
+        record = KycVendorPriority.objects.filter(
+            pk=pk, deleted_at__isnull=True
+        ).first()
         if not record:
-            return Response({"success": False, "message": "Record not found."}, status=404)
+            return Response(
+                {"success": False, "message": "Record not found."}, status=404
+            )
         record.deleted_by = request.user.id
         record.deleted_at = timezone.now()
         record.save()
-        return Response({"success": True, "message": "Vendor priority deleted successfully."}, status=200)
+        return Response(
+            {"success": True, "message": "Vendor priority deleted successfully."},
+            status=200,
+        )

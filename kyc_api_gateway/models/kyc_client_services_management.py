@@ -25,6 +25,6 @@ class KycClientServicesManagement(models.Model):
 
     class Meta:
         db_table = "kyc_client_services_management"
-        ordering = ["priority"]  # default ordering by priority
+        ordering = ["priority"]  
     def __str__(self):
         return f"{self.client} → {self.myservice} ({self.status})"

@@ -13,7 +13,6 @@ from rest_framework_simplejwt.token_blacklist.models import (
 def generate_tokens_for_user(user: AbstractBaseUser) -> dict[str, str]:
     refresh = RefreshToken.for_user(user)
 
-    # Use full_name property from your model
     refresh["email"] = user.email
     refresh["full_name"] = user.full_name
     refresh["mobile_number"] = user.mobile_number

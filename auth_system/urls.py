@@ -24,15 +24,14 @@ from auth_system.views.department_view import (
     DepartmentList,
 )
 
-# from auth_system.views.user_view import (
-#     ForgotPasswordView,
-#     ChangePasswordView,
-# )
-
 
 from auth_system.views.role_view import RoleDetailView, RoleListCreateView, RoleList
 
-from auth_system.views.user_view import UserDetailUpdateDeleteView, UserListCreateView,UserStatusUpdateView
+from auth_system.views.user_view import (
+    UserDetailUpdateDeleteView,
+    UserListCreateView,
+    UserStatusUpdateView,
+)
 
 
 urlpatterns = [
@@ -76,9 +75,4 @@ urlpatterns = [
     path("department/", DepartmentListCreate.as_view(), name="department-list-create"),
     path("department/<int:pk>/", DepartmentDetail.as_view(), name="department-detail"),
     path("department-list/", DepartmentList.as_view(), name="department-list"),
-
-    # path('forgot_password/', ForgotPasswordView.as_view(), name='forgot_password'),
-    # path('change_password/', ChangePasswordView.as_view(), name='change_password'),
 ]
-
-

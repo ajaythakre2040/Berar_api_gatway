@@ -15,7 +15,7 @@ class ClientManagement(models.Model):
     phone = models.CharField(max_length=15, unique=True)
     position = models.CharField(max_length=255)
     status = models.IntegerField(
-        choices=USER_STATUS_CHOICES,  # choices optional, sirf admin panel ke liye
+        choices=USER_STATUS_CHOICES,  
         default=STATUS_PENDING,
     )
     risk_level = models.CharField(max_length=100)
