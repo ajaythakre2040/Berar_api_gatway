@@ -25,31 +25,37 @@ Berar Finance Support Team
 
     html_content = f"""
 <html>
-  <body style="font-family: Arial, sans-serif; background-color: 
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: auto; background-color: 
+  <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <tr>
-        <td style="background-color: 
+        <td style="background-color: #004080; padding: 20px; color: #ffffff; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px;">
           <h2 style="margin: 0;">Berar Finance</h2>
         </td>
       </tr>
       <tr>
-        <td style="padding: 30px;">
+        <td style="padding: 30px; color: #333333;">
           <p style="font-size: 16px;">Hi,</p>
-          <p style="font-size: 15px;">We received a request on <strong>{timestamp}</strong> to reset the password for your Berar Finance account.</p>
+          <p style="font-size: 15px;">
+            We received a request on <strong>{timestamp}</strong> to reset the password for your Berar Finance account.
+          </p>
           <p style="font-size: 15px;">Click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
-            <a href="{reset_link}" style="background-color: 
+            <a href="{reset_link}" style="background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
               Reset Password
             </a>
           </div>
-          <p style="font-size: 14px;">If you didn’t request this, you can safely ignore this email.</p>
-          <p style="font-size: 14px;">Thanks,<br/>Berar Finance Support Team</p>
+          <p style="font-size: 14px;">
+            If you didn’t request this, you can safely ignore this email.
+          </p>
+          <p style="font-size: 14px;">
+            Thanks,<br/>Berar Finance Support Team
+          </p>
         </td>
       </tr>
       <tr>
-        <td style="background-color: 
-          © {year} Berar Finance Pvt. Ltd.<br/>
-          Contact: <a href="mailto:customercare@berarfinance.com" style="color: 
+        <td style="background-color: #f0f0f0; padding: 20px; font-size: 12px; color: #666666; text-align: center; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+          &copy; {year} Berar Finance Pvt. Ltd.<br/>
+          Contact: <a href="mailto:customercare@berarfinance.com" style="color: #007bff; text-decoration: none;">customercare@berarfinance.com</a>
         </td>
       </tr>
     </table>

@@ -38,107 +38,15 @@ User = get_user_model()
 token_generator = PasswordResetTokenGenerator()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def is_valid_mobile(identifier: str) -> bool:
     pattern = r"^\+?1?\d{9,15}$"
     return bool(re.match(pattern, identifier))
-
 
 
 def get_user_by_identifier(identifier: str):
     if is_valid_mobile(identifier):
         return TblUser.objects.filter(mobile_number=identifier).first()
     return TblUser.objects.filter(Q(email=identifier) | Q(username=identifier)).first()
-
 
 
 def log_failed_attempt(username, ip, agent, reason):
@@ -222,7 +130,6 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        
         user.login_attempts = 0
         user.is_login = True
         user.save()
@@ -290,7 +197,6 @@ class LogoutView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            
             if session.ip_address != ip or session.agent_browser != agent:
                 return Response(
                     {
@@ -301,16 +207,13 @@ class LogoutView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-            
             session.is_active = False
             session.logout_at = timezone.now()
             session.save()
 
-            
             blacklist_token(refresh_token, token_type="refresh", user=request.user)
             blacklist_token(access_token, token_type="access", user=request.user)
 
-            
             user = request.user
             user.is_login = False
             user.save(update_fields=["is_login"])
