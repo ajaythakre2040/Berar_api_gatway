@@ -58,7 +58,7 @@ class RoleListCreateView(APIView):
                     {
                         "success": True,
                         "message": "Role created successfully.",
-                        "data": RoleSerializer(role).data,
+                        # "data": RoleSerializer(role).data,
                     },
                     status=status.HTTP_201_CREATED,
                 )

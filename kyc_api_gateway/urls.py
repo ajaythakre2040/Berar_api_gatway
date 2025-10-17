@@ -1,5 +1,6 @@
 from django.urls import path
 
+from kyc_api_gateway.views.Kyc_vendor_priority_view import KycVendorPriorityDetail, KycVendorPriorityListCreate
 from kyc_api_gateway.views.client_management_view import (
      ClientManagementListCreate, ClientManagementDetail,
     #  ClientAllCount,
@@ -25,6 +26,7 @@ from kyc_api_gateway.views.kyc_client_services_management_view import (
     KycClientServicesListCreate,
     KycClientServicesDetail,
 )
+
 
 
 from kyc_api_gateway.views.uat.pan_details_view import PanUatDetailsAPIView
@@ -55,6 +57,8 @@ urlpatterns = [
     path("kyc_client_services/", KycClientServicesListCreate.as_view(), name="kyc_client_services_list"),
     path("kyc_client_services/<int:pk>/", KycClientServicesDetail.as_view(), name="kyc_client_services_detail"),
 
+    path("vendor_priority/", KycVendorPriorityListCreate.as_view(), name="vendor_priority_list_create"),
+    path("vendor_priority/<int:pk>/", KycVendorPriorityDetail.as_view(), name="vendor_priority_detail"),
 
     #uat
     # path("vendor_active_count/", VendorAllCount.as_view(), name="Vendor_all_count"),

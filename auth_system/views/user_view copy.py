@@ -12,12 +12,6 @@ from django.db.models import Q
 from auth_system.utils.pagination import CustomPagination
 from rest_framework.views import APIView
 
-# from django.core.mail import send_mail
-# from django.utils.crypto import get_random_string
-# from django.contrib.auth.hashers import make_password
-# from models.user import TblUser
-
-
 
 class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, IsTokenValid]
@@ -212,56 +206,3 @@ class UserStatusUpdateView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-
-
-# class ForgotPasswordView(APIView):
-#      def post(self, request):
-#         email = request.data.get('email')
-
-#         if not email:
-#             return Response({"message": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         try:
-#             user = TblUser.objects.get(email=email)
-#         except TblUser.DoesNotExist:
-#             return Response({"message": "Email not found"}, status=status.HTTP_404_NOT_FOUND)
-
-#         # Temporary password generate
-#         temp_password = get_random_string(10)
-#         user.password = make_password(temp_password)
-#         user.save()
-
-#         # Email bhejna
-#         try:
-#             send_mail(
-#                 subject="Password Reset - YourApp",
-#                 message=f"Your temporary password is: {temp_password}\nPlease login and change it immediately.",
-#                 from_email="no-reply@yourapp.com",
-#                 recipient_list=[email],
-#                 fail_silently=False,
-#             )
-#         except Exception as e:
-#             return Response({"message": "Failed to send email", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-#         return Response({"message": "Temporary password sent to your email"}, status=status.HTTP_200_OK)
-
-
-
-# class ChangePasswordView(APIView):
-#     permission_classes = [IsAuthenticated]
-
-#     def post(self, request):
-#         user = request.user
-#         old_password = request.data.get("old_password")
-#         new_password = request.data.get("new_password")
-
-#         if not old_password or not new_password:
-#             return Response({"message": "Both old and new password are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         if not user.check_password(old_password):
-#             return Response({"message": "Old password incorrect"}, status=status.HTTP_400_BAD_REQUEST)
-
-#         user.set_password(new_password)
-#         user.save()
-
-#         return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)

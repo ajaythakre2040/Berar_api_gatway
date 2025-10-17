@@ -5,7 +5,7 @@ from .uat_pan_details import UatPanDetails
 from .uat_pan_request_log import UatPanRequestLog
 from .kyc_my_services import KycMyServices
 from .kyc_client_services_management import KycClientServicesManagement
-
+from .Kyc_vendor_priority import KycVendorPriority
 # Uat Models Added
 
 from .uat_bill_details import UatElectricityBill
