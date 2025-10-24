@@ -4,15 +4,15 @@ from datetime import datetime
 
 
 def send_reset_password_email(to_email, reset_link):
-    subject = "Reset your Berar Finance account password"
-    from_email = f"Berar Finance <{settings.DEFAULT_FROM_EMAIL}>"
+    subject = "Reset your Api Gatway account password"
+    from_email = f"Api Gatway <{settings.DEFAULT_FROM_EMAIL}>"
     year = datetime.now().year
     timestamp = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
     text_content = f"""
 Hi,
 
-We received a request on {timestamp} to reset the password for your Berar Finance account.
+We received a request on {timestamp} to reset the password for your Api Gatway account.
 
 Click the link below to reset it:
 {reset_link}
@@ -20,7 +20,7 @@ Click the link below to reset it:
 If you didn’t request this, please ignore this email.
 
 Thanks,
-Berar Finance Support Team
+Api Gatway Support Team
 """
 
     html_content = f"""
@@ -29,14 +29,14 @@ Berar Finance Support Team
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <tr>
         <td style="background-color: #004080; padding: 20px; color: #ffffff; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-          <h2 style="margin: 0;">Berar Finance</h2>
+          <h2 style="margin: 0;">Api Gatway</h2>
         </td>
       </tr>
       <tr>
         <td style="padding: 30px; color: #333333;">
           <p style="font-size: 16px;">Hi,</p>
           <p style="font-size: 15px;">
-            We received a request on <strong>{timestamp}</strong> to reset the password for your Berar Finance account.
+            We received a request on <strong>{timestamp}</strong> to reset the password for your Api Gatway account.
           </p>
           <p style="font-size: 15px;">Click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
@@ -48,14 +48,14 @@ Berar Finance Support Team
             If you didn’t request this, you can safely ignore this email.
           </p>
           <p style="font-size: 14px;">
-            Thanks,<br/>Berar Finance Support Team
+            Thanks,<br/>Api Gatway Support Team
           </p>
         </td>
       </tr>
       <tr>
         <td style="background-color: #f0f0f0; padding: 20px; font-size: 12px; color: #666666; text-align: center; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
-          &copy; {year} Berar Finance Pvt. Ltd.<br/>
-          Contact: <a href="mailto:customercare@berarfinance.com" style="color: #007bff; text-decoration: none;">customercare@berarfinance.com</a>
+          &copy; {year} Api Gatway Pvt. Ltd.<br/>
+          Contact: <a href="mailto:customercare@apigatway.com" style="color: #007bff; text-decoration: none;">customercare@apigatway.com</a>
         </td>
       </tr>
     </table>
