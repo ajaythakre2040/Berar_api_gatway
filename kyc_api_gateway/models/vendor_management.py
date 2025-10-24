@@ -19,7 +19,7 @@ class VendorManagement(models.Model):
     updated_by = models.IntegerField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
     deleted_by = models.IntegerField(null=True, blank=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)git
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "kyc_vendor_management"
