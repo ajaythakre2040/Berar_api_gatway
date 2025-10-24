@@ -55,6 +55,7 @@ class AccountUnlockLog(models.Model):
         verbose_name = "Account Unlock Log"
         verbose_name_plural = "Account Unlock Logs"
         ordering = ["-timestamp"]
+        db_table = "auth_system_account_unlock_log"
 
     def __str__(self):
         status = "✅ Success" if self.success else "❌ Failed"

@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
 
 from auth_system.models.AccountUnlockLog import AccountUnlockLog
+from auth_system.models.forgot_password import ForgotPassword
 from auth_system.models.login_fail_attempts import LoginFailAttempts
 from auth_system.models.password_reset_log import PasswordResetLog
 from auth_system.models.user import TblUser
@@ -37,6 +38,7 @@ from constant import MAX_LOGIN_ATTEMPTS
 import re
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.db import transaction
+from datetime import timedelta
 
 User = get_user_model()
 token_generator = PasswordResetTokenGenerator()
@@ -271,14 +273,6 @@ class ForgotPasswordView(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            PasswordResetLog.objects.create(
-                email=email,
-                ip_address=ip,
-                user_agent=user_agent,
-                action="forgot_password_requested",
-                successful=False,
-                details="Email not found",
-            )
 
             return Response(
                 {
@@ -292,39 +286,39 @@ class ForgotPasswordView(APIView):
         token = token_generator.make_token(user)
         reset_link = f"{settings.FRONTEND_RESET_PASSWORD_URL}?uid={uid}&token={token}"
 
-        try:
+        expires_at = timezone.now() + timedelta(hours=1)
 
-            send_reset_password_email(email, reset_link)
-            successful = True
-            details = "Reset link sent"
-        except Exception as e:
-            successful = False
-            details = f"Email send failed: {str(e)}"
-
-        PasswordResetLog.objects.create(
+        ForgotPassword.objects.create(
             user=user,
-            email=email,
+            token=token,
             ip_address=ip,
             user_agent=user_agent,
-            action="forgot_password_requested",
-            successful=successful,
-            details=details,
+            expires_at=expires_at,
         )
 
-        return Response(
-            {
-                "success": True,
-                "message": "If the email exists, a reset link has been sent.",
-            },
-            status=status.HTTP_200_OK,
-        )
+        try:
+            send_reset_password_email(email, reset_link)
+            return Response(
+                {
+                    "success": True,
+                    "message": "If the email exists, a reset link has been sent.",
+                    "reset_link": reset_link,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"success": False, "message": f"Failed to send email: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class ResetPasswordConfirmView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     throttle_classes = [ForgotPasswordThrottle]
 
     def post(self, request):
+
         uidb64 = request.data.get("uid")
         token = request.data.get("token")
         new_password = request.data.get("new_password")
@@ -332,7 +326,6 @@ class ResetPasswordConfirmView(APIView):
         ip, user_agent = get_client_ip_and_agent(request)
 
         missing_fields = []
-
         if not uidb64:
             missing_fields.append("uid")
         if not token:
@@ -381,24 +374,72 @@ class ResetPasswordConfirmView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not token_generator.check_token(user, token):
+        try:
+            reset_entry = (
+                ForgotPassword.objects.filter(user=user).order_by("-created_at").first()
+            )
+        except Exception:
+            return Response(
+                {"success": False, "message": "Error while fetching reset entry."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        if not reset_entry:
+            return Response(
+                {"success": False, "message": "No reset request found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if reset_entry.token != token:
             return Response(
                 {"success": False, "message": "Invalid or expired token."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user.set_password(new_password)
-        user.save()
+        if reset_entry.ip_address != ip or reset_entry.user_agent != user_agent:
+            return Response(
+                {"success": False, "message": "IP address or user agent mismatch."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        PasswordResetLog.objects.create(
-            user=user,
-            email=user.email,
-            ip_address=ip,
-            user_agent=user_agent,
-            action="forgot_password_reset",
-            successful=True,
-            details="Password reset successfully via email link",
-        )
+        if reset_entry.is_expired():
+            return Response(
+                {"success": False, "message": "Token has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user.set_password(new_password)
+            user.save()
+        except Exception:
+            return Response(
+                {"success": False, "message": "Failed to reset password."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        try:
+            PasswordResetLog.objects.create(
+                user=user,
+                email=user.email,
+                ip_address=ip,
+                user_agent=user_agent,
+                action="forgot_password_reset",
+                successful=True,
+                details="Password reset successfully via email link",
+            )
+        except Exception:
+            return Response(
+                {"success": False, "message": "Failed to log password reset."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        try:
+            reset_entry.delete()
+        except Exception:
+            return Response(
+                {"success": False, "message": "Failed to delete reset entry."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(
             {"success": True, "message": "Password reset successfully."},

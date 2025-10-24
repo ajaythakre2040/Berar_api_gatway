@@ -8,6 +8,7 @@ from .department import Department
 from .password_reset_log import PasswordResetLog
 from .login_fail_attempts import LoginFailAttempts
 from .AccountUnlockLog import AccountUnlockLog
+from .forgot_password import ForgotPassword
 
 __all__ = [
     "TblUser",
@@ -20,4 +21,6 @@ __all__ = [
     "PasswordResetLog",
     "LoginFailAttempts",
     "AccountUnlockLog",
-]
+    "ForgotPassword",
+    
+    ]

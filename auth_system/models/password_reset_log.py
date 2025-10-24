@@ -17,5 +17,8 @@ class PasswordResetLog(models.Model):
     successful = models.BooleanField(default=False)
     details = models.TextField(blank=True, null=True)
 
+    class Meta:
+        db_table = "auth_system_password_reset_log"
+
     def __str__(self):
         return f"{self.email} - {self.action} - {self.timestamp}"

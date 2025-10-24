@@ -103,7 +103,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/day",
         "anon": "100/day",
-        "forgot_password": "30/hour",
+        "forgot_password": "5/hour",
         "change_password": "10/hour",
     },
 }
@@ -194,5 +194,3 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
