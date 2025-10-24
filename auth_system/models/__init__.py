@@ -7,6 +7,7 @@ from .role_permission import RolePermission
 from .department import Department
 from .password_reset_log import PasswordResetLog
 from .login_fail_attempts import LoginFailAttempts
+from .AccountUnlockLog import AccountUnlockLog
 
 __all__ = [
     "TblUser",
@@ -18,4 +19,5 @@ __all__ = [
     "Department",
     "PasswordResetLog",
     "LoginFailAttempts",
+    "AccountUnlockLog",
 ]

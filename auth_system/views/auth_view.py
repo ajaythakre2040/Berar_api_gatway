@@ -6,10 +6,14 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
 
+from auth_system.models.AccountUnlockLog import AccountUnlockLog
 from auth_system.models.login_fail_attempts import LoginFailAttempts
 from auth_system.models.password_reset_log import PasswordResetLog
 from auth_system.models.user import TblUser
 from auth_system.models.login_session import LoginSession
+from auth_system.serializers.account_unlock_log_serializer import (
+    AccountUnlockLogSerializer,
+)
 from auth_system.serializers.user import TblUserSerializer
 from auth_system.throttles import ChangePasswordThrottle, ForgotPasswordThrottle
 from auth_system.utils.token_utils import blacklist_token, generate_tokens_for_user
@@ -317,7 +321,7 @@ class ForgotPasswordView(APIView):
 
 
 class ResetPasswordConfirmView(APIView):
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
     throttle_classes = [ForgotPasswordThrottle]
 
     def post(self, request):
@@ -475,4 +479,122 @@ class ChangePasswordView(APIView):
         return Response(
             {"success": True, "message": "Password changed successfully."},
             status=status.HTTP_200_OK,
+        )
+
+
+class AccountUnlockView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        data = request.data
+        identifier = data.get("username", "").strip()
+        first = data.get("first_name", "").strip()
+        last = data.get("last_name", "").strip()
+        mobile = data.get("mobile_number", "").strip()
+
+        if not all([identifier, first, last, mobile]):
+            return Response({"message": "All fields are required."}, status=400)
+
+        ip, user_agent = get_client_ip_and_agent(request)
+
+        user = TblUser.objects.filter(
+            Q(email__iexact=identifier) | Q(username__iexact=identifier),
+            first_name__iexact=first,
+            last_name__iexact=last,
+            mobile_number=mobile,
+        ).first()
+
+        if not user:
+            AccountUnlockLog.objects.create(
+                unlocked_by=request.user if request.user.is_authenticated else None,
+                unlocked_user=None,
+                method="admin" if request.user.is_authenticated else "self",
+                ip_address=ip,
+                user_agent=user_agent,
+                details="Unlock failed: details did not match.",
+                success=False,
+            )
+            return Response(
+                {"message": "Details did not match. Account not unlocked."}, status=400
+            )
+
+        if user.login_attempts < 5:
+            return Response(
+                {
+                    "message": "Your account is already active. No further activation is required."
+                },
+                status=200,
+            )
+
+        if request.user.is_authenticated:
+
+            if request.user == user:
+
+                method = "self"
+                unlocked_by = request.user
+
+            elif request.user.role_id.type == "System":
+                method = "admin"
+                unlocked_by = request.user
+            else:
+                return Response(
+                    {"message": "You do not have permission to unlock this account."},
+                    status=403,
+                )
+
+            user.login_attempts = 0
+            user.is_active = True
+            user.save(update_fields=["login_attempts", "is_active"])
+
+            log = AccountUnlockLog.objects.create(
+                unlocked_by=unlocked_by,
+                unlocked_user=user,
+                method=method,
+                ip_address=ip,
+                user_agent=user_agent,
+                details=f"Account of {user.full_name} unlocked successfully.",
+                success=True,
+            )
+
+            serializer = AccountUnlockLogSerializer(log)
+            return Response(
+                {"message": "Account unlocked successfully.", "log": serializer.data},
+                status=200,
+            )
+
+        elif not request.user.is_authenticated:
+            if user and identifier == data.get("username"):
+                method = "self"
+                unlocked_by = user
+
+                user.login_attempts = 0
+                user.is_active = True
+                user.save(update_fields=["login_attempts", "is_active"])
+
+                log = AccountUnlockLog.objects.create(
+                    unlocked_by=unlocked_by,
+                    unlocked_user=user,
+                    method=method,
+                    ip_address=ip,
+                    user_agent=user_agent,
+                    details=f"Account of {user.full_name} unlocked successfully.",
+                    success=True,
+                )
+
+                serializer = AccountUnlockLogSerializer(log)
+                return Response(
+                    {
+                        "message": "Account unlocked successfully.",
+                        "log": serializer.data,
+                    },
+                    status=200,
+                )
+            else:
+                return Response(
+                    {"message": "Invalid account details or unauthorized access."},
+                    status=400,
+                )
+
+        return Response(
+            {"message": "Authentication required to unlock account."}, status=401
         )
