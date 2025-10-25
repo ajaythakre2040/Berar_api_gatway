@@ -4,22 +4,22 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 from kyc_api_gateway.models import (
-    UatVoterDetail,
+    ProVoterDetail,
     ClientManagement,
     KycClientServicesManagement,
     KycVendorPriority
 )
-from kyc_api_gateway.serializers.uat_voter_details_serializer import UatVoterDetailSerializer
-from kyc_api_gateway.services.uat.voter_handler import (
+from kyc_api_gateway.serializers.pro_voter_details_serializer import ProVoterDetailSerializer
+from kyc_api_gateway.services.pro.voter_handler import (
     call_voter_vendor_api,
     normalize_vendor_response,
     save_voter_data
 )
 from constant import KYC_MY_SERVICES
-from kyc_api_gateway.models.uat_voter_request_log import UatVoterRequestLog
+from kyc_api_gateway.models.pro_voter_request_log import ProVoterRequestLog
 
 
-class UatVoterDetailsAPIView(APIView):
+class ProVoterDetailsAPIView(APIView):
     authentication_classes = []
     permission_classes = []
 
@@ -125,13 +125,13 @@ class UatVoterDetailsAPIView(APIView):
             }, status=500)
 
         days_ago = timezone.now() - timedelta(days=cache_days)
-        cached = UatVoterDetail.objects.filter(
+        cached = ProVoterDetail.objects.filter(
             voter_id=voter_id,
             created_at__gte=days_ago
         ).first()
 
         if cached:
-            serializer = UatVoterDetailSerializer(cached)
+            serializer = ProVoterDetailSerializer(cached)
             self._log_request(
                 voter_id=voter_id,
                 vendor_name="CACHE",
@@ -175,13 +175,11 @@ class UatVoterDetailsAPIView(APIView):
 
         for vp in vendors:
             vendor = vp.vendor
-
-            print('vendore', vendor)
             try:
                 response = call_voter_vendor_api(vendor, request.data)
 
                 print('response', response)
-
+                
                 if response and response.get("http_error"):
                     self._log_request(
                         voter_id=voter_id,
@@ -224,7 +222,7 @@ class UatVoterDetailsAPIView(APIView):
                     continue
 
                 voter_obj = save_voter_data(normalized, client.id)
-                serializer = UatVoterDetailSerializer(voter_obj)
+                serializer = ProVoterDetailSerializer(voter_obj)
                 self._log_request(
                     voter_id=voter_id,
                     vendor_name=vendor.vendor_name,
@@ -285,6 +283,8 @@ class UatVoterDetailsAPIView(APIView):
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
         api_key = request.headers.get("X-API-KEY")
+
+        print('_authenticate_client', api_key)
         if not api_key:
             self._log_request(
                 voter_id=None,
@@ -302,10 +302,13 @@ class UatVoterDetailsAPIView(APIView):
             return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
 
         client = ClientManagement.objects.filter(
-            uat_key=api_key,
+            prod_key=api_key,
             deleted_at__isnull=True
         ).first()
 
+
+        print('_authenticate_client client', client)
+        
         if not client:
             self._log_request(
                 voter_id=None,
@@ -346,7 +349,7 @@ class UatVoterDetailsAPIView(APIView):
     def _log_request(self, voter_id, vendor_name, endpoint, status_code, status,
                      request_payload=None, response_payload=None, error_message=None,
                      user=None, voter_obj=None, ip_address=None, user_agent=None):
-        UatVoterRequestLog.objects.create(
+        ProVoterRequestLog.objects.create(
             voter_detail=voter_obj,
             vendor=vendor_name,
             endpoint=endpoint,

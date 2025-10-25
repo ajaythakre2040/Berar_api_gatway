@@ -1,6 +1,6 @@
 import requests
 from decouple import config
-from kyc_api_gateway.models import UatRcDetails
+from kyc_api_gateway.models import ProRcDetails
 from kyc_api_gateway.utils.constants import VENDOR_RC_SERVICE_ENDPOINTS
 
 SUREPASS_TOKEN = config("SUREPASS_TOKEN", default=None)
@@ -8,56 +8,124 @@ if not SUREPASS_TOKEN:
     raise ValueError("SUREPASS_TOKEN is not set in your environment variables.")
 
 
-def build_rc_request(vendor_name, request_data):
-    vendor_key = vendor_name.lower()
 
-    if vendor_key == "karza":
-        return {
+def build_rc_request(vendor_name, request_data):
+    if vendor_name.lower() == "karza":
+
+     return {
             "reg_no": request_data.get("rc_number"),
             "consent": request_data.get("consent", "Y"),
             "clientData": {"caseId": request_data.get("clientData", {}).get("caseId", "123456")},
         }
 
-    elif vendor_key == "surepass":
-        return {"id_number": request_data.get("rc_number")}
+    elif vendor_name.lower() == "surepass":
+        # return {"id_number": request_data.get("rc_number")}
+        return {
+            "id_number": request_data.get("rc_number")
+        }
 
-    return {}
 
-def call_rc_vendor_api(vendor, request_data, env="uat"):
+    return request_data
+
+
+
+# def call_vendor_api(vendor, request_data):
+
+#     vendor_key = vendor.vendor_name.lower()
+#     endpoint_path = VENDOR_RC_SERVICE_ENDPOINTS.get(vendor_key)
+    
+#     if not endpoint_path:
+#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint")
+#         return None
+
+#     base_url = vendor.end_point_production
+#     if not base_url:
+#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no base URL for")
+#         return None
+
+#     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
+
+#     payload = build_rc_request(vendor_key, request_data)
+
+#     headers = {"Content-Type": "application/json"}
+
+#     if vendor_key == "karza":
+#         headers["x-karza-key"] = vendor.production_key
+#     elif vendor_key == "surepass":
+#         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
+
+#     try:
+#         response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
+#         response.raise_for_status()
+#         try:
+#             return response.json()  
+#         except ValueError:
+#             print(f"[ERROR] Vendor '{vendor.vendor_name}' returned invalid JSON: {response.text}")
+#             return None
+#     except Exception as e:
+#         print(f"[ERROR] RC API call failed ({vendor.vendor_name}): {str(e)}")
+#         return None
+
+def call_rc_vendor_api(vendor, request_data):
     vendor_key = vendor.vendor_name.lower()
     endpoint_path = VENDOR_RC_SERVICE_ENDPOINTS.get(vendor_key)
-    if not endpoint_path:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint for {env}")
-        return None
+    base_url = vendor.prod_base_url
 
-    base_url = vendor.end_point_uat if env == "uat" else vendor.end_point_production
-    if not base_url:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no base URL for {env}")
-        return None
+    if not endpoint_path or not base_url:
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": f"Vendor '{vendor.vendor_name}' not configured properly."
+        }
 
     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
     payload = build_rc_request(vendor_key, request_data)
-    headers = {"Content-Type": "application/json"}
 
+    headers = {"Content-Type": "application/json"}
     if vendor_key == "karza":
-        headers["x-karza-key"] = vendor.uat_key if env == "uat" else vendor.production_key
+        headers["x-karza-key"] = vendor.prod_api_key
     elif vendor_key == "surepass":
         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
 
     try:
-        response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
-        response.raise_for_status()
+        response = requests.post(full_url, json=payload, headers=headers)
+        response.raise_for_status()  # Will trigger HTTPError for 4xx/5xx
+
         try:
-            return response.json()  
+            return response.json()
         except ValueError:
-            print(f"[ERROR] Vendor '{vendor.vendor_name}' returned invalid JSON: {response.text}")
-            return None
+            return {
+                "http_error": True,
+                "status_code": response.status_code,
+                "vendor_response": response.text,
+                "error_message": "Invalid JSON response"
+            }
+
+    except requests.HTTPError as e:
+        # Capture 400/403/500 error details for logging
+        try:
+            error_content = response.json()
+        except Exception:
+            error_content = response.text
+        return {
+            "http_error": True,
+            "status_code": response.status_code,
+            "vendor_response": error_content,
+            "error_message": str(e)
+        }
+
     except Exception as e:
-        print(f"[ERROR] RC API call failed ({vendor.vendor_name}): {str(e)}")
-        return None
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": str(e)
+        }
 
 
-def normalize_rc_response(vendor_name, raw_data):
+
+def normalize_response(vendor_name, raw_data):
     if not isinstance(raw_data, dict):
         print(f"[ERROR] normalize_rc_response received invalid data: {raw_data}")
         return None
@@ -121,19 +189,19 @@ def normalize_rc_response(vendor_name, raw_data):
         }
 
 
-def save_rc_data(normalized, created_by):
+def save_data(normalized, created_by):
     if not normalized:
         print("[ERROR] Cannot save RC data: normalized is None")
         return None
 
-    rc_fields = [f.name for f in UatRcDetails._meta.get_fields()]
+    rc_fields = [f.name for f in ProRcDetails._meta.get_fields()]
 
     filtered_data = {k: v for k, v in normalized.items() if k in rc_fields}
 
     filtered_data["created_by"] = created_by
 
     try:
-        return UatRcDetails.objects.create(**filtered_data)
+        return ProRcDetails.objects.create(**filtered_data)
     except Exception as e:
         print(f"[ERROR] Failed saving RCDetails: {e}")
         return None

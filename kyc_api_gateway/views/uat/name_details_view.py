@@ -1,153 +1,420 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from datetime import timedelta
 from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from kyc_api_gateway.models import (
-    VendorManagement,
+    UatNameMatch,
     ClientManagement,
     KycClientServicesManagement,
-    UatNameMatch,
-    UatNameMatchRequestLog
+    KycVendorPriority
 )
+from kyc_api_gateway.models.uat_name_request_log import UatNameMatchRequestLog
 from kyc_api_gateway.serializers.uat_name_match_serializer import UatNameMatchSerializer
-from kyc_api_gateway.services.uat.name_handler import (
-    call_name_vendor_api,
-    normalize_name_response,
-    save_name_match
-)
+
+from kyc_api_gateway.services.uat.name_handler import call_vendor_api_uat, normalize_vendor_response , save_name_match_uat 
+from constant import KYC_MY_SERVICES
 
 class NameMatchUatAPIView(APIView):
+
     authentication_classes = []
     permission_classes = []
 
+    
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+    
+
     def post(self, request):
-        client = self._authenticate_client(request, env="uat")
-        if isinstance(client, Response):
-            return client
 
-        services = self._get_client_services(client, env="uat")
-        if isinstance(services, Response):
-            return services
-
-        service = next((s for s in services if s["name"].upper() == "NAME"), None)
-        if not service:
-            return Response({"success": False, "status": 403, "error": "Name Match service not assigned"}, status=403)
-
-        return self._fetch_name_match(request, env="uat", client=client, service=service)
-
-
-    def _authenticate_client(self, request, env):
-        key_header = request.headers.get("X-API-KEY")
-        if not key_header:
-            return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
-
-        client = ClientManagement.objects.filter(
-            uat_key=key_header if env == "uat" else key_header,
-            deleted_at__isnull=True
-        ).first()
-
-        if not client:
-            return Response({"success": False, "status": 401, "error": "Invalid API key"}, status=401)
-
-        return client
-
-    def _get_client_services(self, client, env):
-        client_services = KycClientServicesManagement.objects.filter(
-            client=client, status=True, deleted_at__isnull=True
-        ).select_related("myservice")
-
-        if not client_services.exists():
-            return Response({"success": False, "status": 403, "error": "No active services assigned"}, status=403)
-
-        allowed = []
-        for cs in client_services:
-            s = cs.myservice
-            url = s.uat_url if env == "uat" else s.prod_url
-            allowed.append({"id": s.id, "name": s.name, "url": url})
-        return allowed
-
-    def _log_name_request(self, name1, name2, vendor, endpoint, status_code, status,
-                          request_payload=None, response_payload=None, error_message=None,
-                          user=None, match_obj=None):
-        UatNameMatchRequestLog.objects.create(
-            name_1=name1,
-            name_2=name2,
-            vendor=vendor,
-            endpoint=endpoint,
-            status_code=status_code,
-            status=status,
-            request_payload=request_payload,
-            response_payload=response_payload,
-            error_message=error_message,
-            user=user if user and user.is_authenticated else None,
-            name_match=match_obj
-        )
-
-    def _fetch_name_match(self, request, env, client, service):
         name1 = request.data.get("name_1")
         name2 = request.data.get("name_2")
 
-        if not name1 or not name2:
-            return Response(
-                {"success": False, "status": 400, "error": "Both name_1 and name_2 are required"},
-                status=400
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+
+        if not name1 or not name2 or name1.strip() == "":
+            missing = []
+            if not name1 or name1.strip() == "":
+                missing.append("name1")
+            if not name2 or name2.strip() == "":
+                missing.append("name2")
+            
+            error_msg = f"Missing required fields: {', '.join(missing)}"
+            self._log_request(
+                name1=name1,
+                name2=name2,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=400,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
             )
+            return Response({
+                "success": False,
+                "status": 400,
+                "error": error_msg
+            }, status=400)
+        
+        client = self._authenticate_client(request)
+        if isinstance(client, Response):
+            return client
+        
+        service_name = "NAME"
+        service_id = KYC_MY_SERVICES.get(service_name.upper())
 
-        user = request.user if request.user.is_authenticated else None
-        endpoint = request.path
+        if not service_id:
+            error_msg = "Name Match service not assigned"
+            self._log_request(
+                name1=name1,
+                name2=name2,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=403,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            return Response({
+                "success": False,
+                "status": 403,
+                "error": error_msg
+            }, status=403)
+        
+        try:
+            cache_days = self._get_cache_days(client, service_id)
 
-        seven_days_ago = timezone.now() - timedelta(days=7)
+        except PermissionError as e:
+
+            self._log_request(
+                name1=name1,
+                name2=name2,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=403,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=str(e),
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            return Response({
+                "success": False,
+                "status": 403,
+                "error": error_msg
+            }, status=403)
+
+        except ValueError as e:
+            self._log_request(
+                name1=name1,
+                name2=name2,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=500,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=str(e),
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            return Response({
+                "success": False,
+                "status": 500,
+                "error": str(e)
+            }, status=500)
+           
+        days_ago = timezone.now() - timedelta(days=cache_days)
+        name1 = request.data.get("name_1").strip()
+        name2 = request.data.get("name_2").strip()
+
         cached = UatNameMatch.objects.filter(
-            name_1=name1, name_2=name2, created_at__gte=seven_days_ago
+            name_1__iexact=name1,
+            name_2__iexact=name2,
+            created_at__gte=days_ago
         ).first()
 
         if cached:
             serializer = UatNameMatchSerializer(cached)
-            self._log_name_request(name1, name2, "cached", endpoint, 200, "success",
-                                   request_payload=request.data, response_payload=serializer.data,
-                                   user=user, match_obj=cached)
+            self._log_request(
+                name1=name1,
+                name2=name2,
+                vendor_name="cached",
+                endpoint=request.path,
+                status_code=200,
+                status="success",
+                request_payload=request.data,
+                response_payload=serializer.data,
+                error_message=None,
+                user=None,
+                match_obj=cached,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+
             return Response({
                 "success": True,
                 "status": 200,
                 "message": "Cached data",
                 "data": serializer.data
             })
+        
+        vendors = self._get_priority_vendors(client, service_id)
+        print(f"[DEBUG] Found {vendors.count()} priority vendors for client={client.id}, service_id={service_id}")
 
-        vendors = VendorManagement.objects.filter(status="Active", deleted_at__isnull=True).order_by("priority")
+        if not vendors.exists():
+            error_msg = "No vendors configured for Name Match service"
+            self._log_request(
+                name1=name1,
+                name2=name2,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=403,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            return Response({
+                "success": False,
+                "status": 403,
+                "error": error_msg
+            }, status=403)
+        
+        endpoint = request.path
 
-        for vendor in vendors:
+        for vp in vendors:
+            vendor = vp.vendor
+
             try:
-                response = call_name_vendor_api(vendor, request.data, env)
+                response = call_vendor_api_uat(vendor, request.data)
+
                 if not response:
-                    self._log_name_request(name1, name2, vendor.vendor_name, endpoint,
-                                           502, "fail", request_payload=request.data,
-                                           error_message="No response", user=user)
+                    error_msg = f"No response from vendor {vendor.vendor_name}"
+                    self._log_request(
+                        name1=name1,
+                        name2=name2,
+                        vendor_name=vendor.vendor_name,
+                        endpoint=endpoint,
+                        status_code=502,
+                        status="fail",
+                        request_payload=request.data,
+                        response_payload=None,
+                        error_message=error_msg,
+                        user=None,
+                        match_obj=None,
+                        ip_address=ip_address,
+                        user_agent=user_agent
+                    )
                     continue
+                try:
+                    data = response.json()
+                except Exception:
+                    data = None
 
-                data = response.json()
-                normalized = normalize_name_response(vendor.vendor_name, data, request_data=request.data)
+                normalized = normalize_vendor_response(vendor.vendor_name, data or {})
 
-                if normalized:
-                    obj = save_name_match(normalized, client.id)
-                    serializer = UatNameMatchSerializer(obj)
-                    self._log_name_request(name1, name2, vendor.vendor_name, endpoint,
-                                           response.status_code, "success",
-                                           request_payload=request.data,
-                                           response_payload=serializer.data,
-                                           user=user, match_obj=obj)
-                    return Response({
-                        "success": True,
-                        "status": 200,
-                        "message": f"Data from {vendor.vendor_name}",
-                        "data": serializer.data
-                    })
+                if not normalized:
+                    error_msg = f"Normalization failed for vendor {vendor.vendor_name}"
+                    self._log_request(
+                        name1=name1,
+                        name2=name2,
+                        vendor_name=vendor.vendor_name,
+                        endpoint=endpoint,
+                        status_code=502,
+                        status="fail",
+                        request_payload=request.data,
+                        response_payload=data,
+                        error_message=error_msg,
+                        user=None,
+                        match_obj=None,
+                        ip_address=ip_address,
+                        user_agent=user_agent
+                    )
+                    continue
+                
+                name_obj = save_name_match_uat(normalized, client.id)
+                serializer = UatNameMatchSerializer(name_obj)
+
+                self._log_request(
+                    name1=name1,
+                    name2=name2,
+                    vendor_name=vendor.vendor_name,
+                    endpoint=endpoint,
+                    status_code=200,
+                    status="success",
+                    request_payload=request.data,
+                    response_payload=serializer.data,
+                    error_message=None,
+                    user=None,
+                    match_obj=name_obj,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+
+                return Response({
+                    "success": True,
+                    "status": 200,
+                    "message": f"Data from {vendor.vendor_name}",
+                    "data": serializer.data
+                })
 
             except Exception as e:
-                self._log_name_request(name1, name2, vendor.vendor_name, endpoint,
-                                       500, "fail", request_payload=request.data,
-                                       error_message=str(e), user=user)
-                continue 
+                error_msg = f"Request to vendor {vendor.vendor_name} failed: {str(e)}"
+                self._log_request(
+                    name1=name1,
+                    name2=name2,
+                    vendor_name=vendor.vendor_name,
+                    endpoint=endpoint,
+                    status_code=500,
+                    status="fail",
+                    request_payload=request.data,
+                    response_payload=None,
+                    error_message=error_msg,
+                    user=None,
+                    match_obj=None,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                continue
+            
+        return Response({
+            "success": False,
+            "status": 404,
+            "error": "No vendor returned valid data"
+        }, status=404)
 
-        self._log_name_request(name1, name2, None, endpoint, 404, "fail",
-                               request_payload=request.data, error_message="All vendors failed", user=user)
-        return Response({"success": False, "status": 404, "error": "All vendors failed"}, status=404)
+    def _authenticate_client(self, request):
+
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+        api_key = request.headers.get("X-API-KEY")
+        if not api_key:
+
+            error_msg = "Missing API key"
+
+            self._log_request(
+                name1=None,
+                name2=None,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=401,
+                status="fail",
+                request_payload=None,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+        
+            return Response({
+                "success": False,
+                "status": 401,
+                "error": error_msg
+            }, status=401)
+
+        client = ClientManagement.objects.filter(
+            uat_key=api_key,
+            deleted_at__isnull=True
+        ).first()
+
+        if not client:
+            error_msg = "Invalid API key"
+            self._log_request(
+                name1=None,
+                name2=None,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=401,
+                status="fail",
+                request_payload=None,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+
+            return Response({
+                "success": False,
+                "status": 401,
+                "error": error_msg}
+                , status=401)
+        
+        return client
+
+    def _get_cache_days(self, client, service_id):
+       
+        cs = KycClientServicesManagement.objects.filter(
+            client=client,
+            myservice__id=service_id,
+            deleted_at__isnull=True
+        ).first()
+
+        if not cs:
+            raise ValueError(f"Cache days not configured for client={client.id}, service_id={service_id}")
+
+        if cs.status is False:
+            raise PermissionError(f"Service is not permitted for client")
+
+        return cs.day
+    
+
+    def _get_priority_vendors(self, client, service_id):
+        return KycVendorPriority.objects.filter(
+            client=client,
+            my_service_id=service_id,
+            deleted_at__isnull=True
+        ).select_related("vendor").order_by("priority")
+    
+
+    def _log_request(self, name1, name2, vendor_name, endpoint, status_code, status, request_payload=None, response_payload=None, error_message=None, user=None, match_obj=None, ip_address=None, user_agent=None):
+
+         if not isinstance(status_code, int):
+            raise ValueError(f"status_code must be an integer, got {status_code!r}")
+         
+         UatNameMatchRequestLog.objects.create(
+                name_1=name1,
+                name_2=name2,
+                vendor=vendor_name,
+                endpoint=endpoint,
+                status_code=status_code,
+                status=status,
+                request_payload=request_payload,
+                response_payload=response_payload,
+                error_message=error_message,
+                user=user if user and user.is_authenticated else None,
+                name_match=match_obj,
+                ip_address=ip_address,
+                user_agent=user_agent,
+         )
+

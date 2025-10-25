@@ -35,12 +35,20 @@ from kyc_api_gateway.views.uat.pan_details_view import PanUatDetailsAPIView
 
 from kyc_api_gateway.views.uat.bill_details_view import BillUatDetailsAPIView
 
+from kyc_api_gateway.views.uat.pan_details_view import UatPanDetailsAPIView
+from kyc_api_gateway.views.uat.bill_details_view import UatBillDetailsAPIView
 from kyc_api_gateway.views.uat.name_details_view import NameMatchUatAPIView
-
-from kyc_api_gateway.views.uat.voter_details_view import VoterUatAPIView
-
+from kyc_api_gateway.views.uat.voter_details_view import UatVoterDetailsAPIView
 from kyc_api_gateway.views.uat.rc_detailsi_view import RcUatAPIView
+from kyc_api_gateway.views.uat.driving_license_details_view import UatDrivingLicenseAPIView
 
+#production
+from kyc_api_gateway.views.pro.bill_details_view import ProBillDetailsAPIView   
+from kyc_api_gateway.views.pro.pan_details_view import ProPanDetailsAPIView   
+from kyc_api_gateway.views.pro.name_details_view import ProNameMatchAPIView
+from kyc_api_gateway.views.pro.rc_detailsi_view import ProRcAPIView
+from kyc_api_gateway.views.pro.voter_details_view import ProVoterDetailsAPIView
+from kyc_api_gateway.views.pro.driving_license_details_view import ProDrivingLicenseAPIView
 
 
 urlpatterns = [
@@ -67,15 +75,21 @@ urlpatterns = [
     path("api_management/<int:pk>/", ApiManagementDetail.as_view(), name="api_detail"),
     path("end_point_list/", ApiManagementList.as_view(), name="api_list"),
     # path("uat_pan-details/", PanUatDetailsAPIView.as_view(), name="pan-details"),
-    path("uat_pan_details/", PanUatDetailsAPIView.as_view(), name="uat_pan_details"),
-    path("uat_bill_details/", BillUatDetailsAPIView.as_view(), name="uat_bill_details"),
+
+
+    path("uat_pan_details/", UatPanDetailsAPIView.as_view(), name="uat_pan_details"),
+    path("uat_bill_details/", UatBillDetailsAPIView.as_view(), name="uat_bill_details"),
     path("uat_name_details/", NameMatchUatAPIView.as_view(), name="uat_name_details"),
-    path("uat_voter_details/", VoterUatAPIView.as_view(), name="uat_voter_details"),
+    path("uat_voter_details/", UatVoterDetailsAPIView.as_view(), name="uat_voter_details"),
     path("uat_rc_details/", RcUatAPIView.as_view(), name="uat_rc_details"),
+    path("uat_driving_license_details/", UatDrivingLicenseAPIView.as_view(), name="uat_driving_license_details"),
 
     #production
-    # path("prod_pan-details/", PanProductionDetailsAPIView.as_view(), name="pan-details-prod"),
-    # path("prod_pan_details/", PanProductionDetailsAPIView.as_view(), name="prod_pan_details"),
-
+    path("prod_bill_details/", ProBillDetailsAPIView.as_view(), name="prod_bill_details"),
+    path("prod_pan_details/", ProPanDetailsAPIView.as_view(), name="prod_pan_details"),
+    path("prod_name_details/", ProNameMatchAPIView.as_view(), name="prod_name_details"),
+    path("prod_voter_details/", ProVoterDetailsAPIView.as_view(), name="prod_voter_details"),
+    path("prod_rc_details/", ProRcAPIView.as_view(), name="prod_rc_details"),
+    path("prod_driving_license_details/", ProDrivingLicenseAPIView.as_view(), name="prod_driving_license_details"),
 
 ]

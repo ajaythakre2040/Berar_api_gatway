@@ -2,27 +2,24 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
-
 from kyc_api_gateway.models import (
-    UatVoterDetail,
+    ProNameMatch,
     ClientManagement,
     KycClientServicesManagement,
     KycVendorPriority
 )
-from kyc_api_gateway.serializers.uat_voter_details_serializer import UatVoterDetailSerializer
-from kyc_api_gateway.services.uat.voter_handler import (
-    call_voter_vendor_api,
-    normalize_vendor_response,
-    save_voter_data
-)
+from kyc_api_gateway.models.pro_name_request_log import ProNameMatchRequestLog
+from kyc_api_gateway.serializers.pro_name_match_serializer import ProNameMatchSerializer
+
+from kyc_api_gateway.services.pro.name_handler import call_vendor_api, normalize_vendor_response , save_name_match 
 from constant import KYC_MY_SERVICES
-from kyc_api_gateway.models.uat_voter_request_log import UatVoterRequestLog
 
+class ProNameMatchAPIView(APIView):
 
-class UatVoterDetailsAPIView(APIView):
     authentication_classes = []
     permission_classes = []
 
+    
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
@@ -30,64 +27,84 @@ class UatVoterDetailsAPIView(APIView):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+    
 
     def post(self, request):
-        voter_id = (request.data.get("id_number") or "").strip().upper()
-        ip_address = self.get_client_ip(request)
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-        user = request.user if getattr(request.user, "is_authenticated", False) else None
 
-        if not voter_id or voter_id.strip() == "":
+        name1 = request.data.get("name_1")
+        name2 = request.data.get("name_2")
+
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+
+
+        if not name1 or not name2 or name1.strip() == "":
+            missing = []
+            if not name1 or name1.strip() == "":
+                missing.append("name1")
+            if not name2 or name2.strip() == "":
+                missing.append("name2")
+            
+            error_msg = f"Missing required fields: {', '.join(missing)}"
             self._log_request(
-                voter_id=None,
+                name1=name1,
+                name2=name2,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=400,
                 status="fail",
                 request_payload=request.data,
                 response_payload=None,
-                error_message="Missing required field: id_number",
-                user=user,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
             return Response({
                 "success": False,
                 "status": 400,
-                "error": "Voter ID required"
+                "error": error_msg
             }, status=400)
-
+        
         client = self._authenticate_client(request)
         if isinstance(client, Response):
             return client
-
-        service_name = "VOTER"
+        
+        service_name = "NAME"
         service_id = KYC_MY_SERVICES.get(service_name.upper())
+
         if not service_id:
+            error_msg = "Name Match service not assigned"
             self._log_request(
-                voter_id=voter_id,
+                name1=name1,
+                name2=name2,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=403,
                 status="fail",
                 request_payload=request.data,
                 response_payload=None,
-                error_message=f"{service_name} service not configured",
-                user=user,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
             return Response({
                 "success": False,
                 "status": 403,
-                "error": f"{service_name} service not configured"
+                "error": error_msg
             }, status=403)
-
+        
         try:
             cache_days = self._get_cache_days(client, service_id)
+
         except PermissionError as e:
+
             self._log_request(
-                voter_id=voter_id,
+                name1=name1,
+                name2=name2,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=403,
@@ -95,18 +112,21 @@ class UatVoterDetailsAPIView(APIView):
                 request_payload=request.data,
                 response_payload=None,
                 error_message=str(e),
-                user=user,
+                user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
             return Response({
                 "success": False,
                 "status": 403,
-                "error": str(e)
+                "error": error_msg
             }, status=403)
+
         except ValueError as e:
             self._log_request(
-                voter_id=voter_id,
+                name1=name1,
+                name2=name2,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=500,
@@ -114,7 +134,8 @@ class UatVoterDetailsAPIView(APIView):
                 request_payload=request.data,
                 response_payload=None,
                 error_message=str(e),
-                user=user,
+                user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
@@ -123,121 +144,139 @@ class UatVoterDetailsAPIView(APIView):
                 "status": 500,
                 "error": str(e)
             }, status=500)
-
+           
         days_ago = timezone.now() - timedelta(days=cache_days)
-        cached = UatVoterDetail.objects.filter(
-            voter_id=voter_id,
+        name1 = request.data.get("name_1").strip()
+        name2 = request.data.get("name_2").strip()
+
+        cached = ProNameMatch.objects.filter(
+            name_1__iexact=name1,
+            name_2__iexact=name2,
             created_at__gte=days_ago
         ).first()
 
         if cached:
-            serializer = UatVoterDetailSerializer(cached)
+            serializer = ProNameMatchSerializer(cached)
             self._log_request(
-                voter_id=voter_id,
-                vendor_name="CACHE",
+                name1=name1,
+                name2=name2,
+                vendor_name="cached",
                 endpoint=request.path,
                 status_code=200,
                 status="success",
                 request_payload=request.data,
                 response_payload=serializer.data,
-                user=user,
-                voter_obj=cached,
+                error_message=None,
+                user=None,
+                match_obj=cached,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
+
             return Response({
                 "success": True,
                 "status": 200,
                 "message": "Cached data",
                 "data": serializer.data
             })
-
+        
         vendors = self._get_priority_vendors(client, service_id)
+        print(f"[DEBUG] Found {vendors.count()} priority vendors for client={client.id}, service_id={service_id}")
+
         if not vendors.exists():
+            error_msg = "No vendors configured for Name Match service"
             self._log_request(
-                voter_id=voter_id,
+                name1=name1,
+                name2=name2,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=403,
                 status="fail",
                 request_payload=request.data,
                 response_payload=None,
-                error_message="No vendors assigned for this service",
-                user=user,
+                error_message=error_msg,
+                user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
             return Response({
                 "success": False,
                 "status": 403,
-                "error": "No vendors assigned for this service"
+                "error": error_msg
             }, status=403)
+        
+        endpoint = request.path
 
         for vp in vendors:
             vendor = vp.vendor
 
-            print('vendore', vendor)
             try:
-                response = call_voter_vendor_api(vendor, request.data)
+                response = call_vendor_api(vendor, request.data)
 
-                print('response', response)
-
-                if response and response.get("http_error"):
+                if not response:
+                    error_msg = f"No response from vendor {vendor.vendor_name}"
                     self._log_request(
-                        voter_id=voter_id,
+                        name1=name1,
+                        name2=name2,
                         vendor_name=vendor.vendor_name,
-                        endpoint=request.path,
-                        status_code=response.get("status_code") or 500,
+                        endpoint=endpoint,
+                        status_code=502,
                         status="fail",
                         request_payload=request.data,
-                        response_payload=response.get("vendor_response"),
-                        error_message=response.get("error_message"),
-                        user=user,
-                        ip_address=ip_address,
-                        user_agent=user_agent
-                    )
-                    continue  # try next vendor
-                try:
-                    data = response
-
-                    # print('this is data print try', data)
-                except Exception:
-                    data = None
-                    # print('this is data print Exception', data)
-
-                normalized = normalize_vendor_response(vendor.vendor_name, data or {})
-
-                if not normalized:
-                    self._log_request(
-                        voter_id=voter_id,
-                        vendor_name=vendor.vendor_name,
-                        endpoint=request.path,
-                        status_code=204,
-                        status="fail",
-                        request_payload=request.data,
-                        response_payload=getattr(response, 'text', None),
-                        error_message="No valid data returned",
-                        user=user,
+                        response_payload=None,
+                        error_message=error_msg,
+                        user=None,
+                        match_obj=None,
                         ip_address=ip_address,
                         user_agent=user_agent
                     )
                     continue
+                try:
+                    data = response.json()
+                except Exception:
+                    data = None
 
-                voter_obj = save_voter_data(normalized, client.id)
-                serializer = UatVoterDetailSerializer(voter_obj)
+                normalized = normalize_vendor_response(vendor.vendor_name, data or {})
+
+                if not normalized:
+                    error_msg = f"Normalization failed for vendor {vendor.vendor_name}"
+                    self._log_request(
+                        name1=name1,
+                        name2=name2,
+                        vendor_name=vendor.vendor_name,
+                        endpoint=endpoint,
+                        status_code=502,
+                        status="fail",
+                        request_payload=request.data,
+                        response_payload=data,
+                        error_message=error_msg,
+                        user=None,
+                        match_obj=None,
+                        ip_address=ip_address,
+                        user_agent=user_agent
+                    )
+                    continue
+                
+                name_obj = save_name_match(normalized, client.id)
+                serializer = ProNameMatchSerializer(name_obj)
+
                 self._log_request(
-                    voter_id=voter_id,
+                    name1=name1,
+                    name2=name2,
                     vendor_name=vendor.vendor_name,
-                    endpoint=request.path,
+                    endpoint=endpoint,
                     status_code=200,
                     status="success",
                     request_payload=request.data,
                     response_payload=serializer.data,
-                    user=user,
-                    voter_obj=voter_obj,
+                    error_message=None,
+                    user=None,
+                    match_obj=name_obj,
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
+
                 return Response({
                     "success": True,
                     "status": 200,
@@ -246,34 +285,24 @@ class UatVoterDetailsAPIView(APIView):
                 })
 
             except Exception as e:
+                error_msg = f"Request to vendor {vendor.vendor_name} failed: {str(e)}"
                 self._log_request(
-                    voter_id=voter_id,
+                    name1=name1,
+                    name2=name2,
                     vendor_name=vendor.vendor_name,
-                    endpoint=request.path,
+                    endpoint=endpoint,
                     status_code=500,
                     status="fail",
                     request_payload=request.data,
                     response_payload=None,
-                    error_message=str(e),
-                    user=user,
+                    error_message=error_msg,
+                    user=None,
+                    match_obj=None,
                     ip_address=ip_address,
                     user_agent=user_agent
                 )
                 continue
-
-        self._log_request(
-            voter_id=voter_id,
-            vendor_name=None,
-            endpoint=request.path,
-            status_code=404,
-            status="fail",
-            request_payload=request.data,
-            response_payload=None,
-            error_message="No vendor returned valid data",
-            user=user,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
+            
         return Response({
             "success": False,
             "status": 404,
@@ -281,60 +310,84 @@ class UatVoterDetailsAPIView(APIView):
         }, status=404)
 
     def _authenticate_client(self, request):
+
         ip_address = self.get_client_ip(request)
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
 
         api_key = request.headers.get("X-API-KEY")
         if not api_key:
+
+            error_msg = "Missing API key"
+
             self._log_request(
-                voter_id=None,
+                name1=None,
+                name2=None,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=401,
                 status="fail",
-                request_payload=request.data,
+                request_payload=None,
                 response_payload=None,
-                error_message="Missing API key",
+                error_message=error_msg,
                 user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
-            return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
+        
+            return Response({
+                "success": False,
+                "status": 401,
+                "error": error_msg
+            }, status=401)
 
         client = ClientManagement.objects.filter(
-            uat_key=api_key,
+            prod_key=api_key,
             deleted_at__isnull=True
         ).first()
 
         if not client:
+            error_msg = "Invalid API key"
             self._log_request(
-                voter_id=None,
+                name1=None,
+                name2=None,
                 vendor_name=None,
                 endpoint=request.path,
                 status_code=401,
                 status="fail",
-                request_payload=request.data,
+                request_payload=None,
                 response_payload=None,
-                error_message="Invalid API key",
+                error_message=error_msg,
                 user=None,
+                match_obj=None,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
-            return Response({"success": False, "status": 401, "error": "Invalid API key"}, status=401)
 
+            return Response({
+                "success": False,
+                "status": 401,
+                "error": error_msg}
+                , status=401)
+        
         return client
 
     def _get_cache_days(self, client, service_id):
+       
         cs = KycClientServicesManagement.objects.filter(
             client=client,
             myservice__id=service_id,
             deleted_at__isnull=True
         ).first()
+
         if not cs:
             raise ValueError(f"Cache days not configured for client={client.id}, service_id={service_id}")
+
         if cs.status is False:
-            raise PermissionError("Service is not permitted for client")
+            raise PermissionError(f"Service is not permitted for client")
+
         return cs.day
+    
 
     def _get_priority_vendors(self, client, service_id):
         return KycVendorPriority.objects.filter(
@@ -342,20 +395,26 @@ class UatVoterDetailsAPIView(APIView):
             my_service_id=service_id,
             deleted_at__isnull=True
         ).select_related("vendor").order_by("priority")
+    
 
-    def _log_request(self, voter_id, vendor_name, endpoint, status_code, status,
-                     request_payload=None, response_payload=None, error_message=None,
-                     user=None, voter_obj=None, ip_address=None, user_agent=None):
-        UatVoterRequestLog.objects.create(
-            voter_detail=voter_obj,
-            vendor=vendor_name,
-            endpoint=endpoint,
-            status_code=status_code,
-            status=status,
-            request_payload=request_payload,
-            response_payload=response_payload,
-            error_message=error_message,
-            user=user,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
+    def _log_request(self, name1, name2, vendor_name, endpoint, status_code, status, request_payload=None, response_payload=None, error_message=None, user=None, match_obj=None, ip_address=None, user_agent=None):
+
+         if not isinstance(status_code, int):
+            raise ValueError(f"status_code must be an integer, got {status_code!r}")
+         
+         ProNameMatchRequestLog.objects.create(
+                name_1=name1,
+                name_2=name2,
+                vendor=vendor_name,
+                endpoint=endpoint,
+                status_code=status_code,
+                status=status,
+                request_payload=request_payload,
+                response_payload=response_payload,
+                error_message=error_message,
+                user=user if user and user.is_authenticated else None,
+                name_match=match_obj,
+                ip_address=ip_address,
+                user_agent=user_agent,
+         )
+

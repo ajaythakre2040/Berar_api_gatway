@@ -1,129 +1,379 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from datetime import timedelta
 from django.utils import timezone
-from kyc_api_gateway.models import PanDetails, VendorManagement
-from kyc_api_gateway.serializers.uat_pan_details_serializer import PanDetailsSerializer
-from kyc_api_gateway.services.uat.pan_handler import call_vendor_api, save_pan_data, normalize_vendor_response
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
-class PanProductionDetailsAPIView(APIView):
+from kyc_api_gateway.models import (
+    ProPanDetails,
+    ClientManagement,
+    KycClientServicesManagement,
+    KycVendorPriority
+)
+from kyc_api_gateway.serializers.pro_pan_details_serializer import ProPanDetailsSerializer
+from kyc_api_gateway.services.pro.pan_handler import (
+    call_vendor_api,
+    save_pan_data,
+    normalize_vendor_response
+)
+from constant import KYC_MY_SERVICES
+from kyc_api_gateway.models.pro_pan_request_log import ProPanRequestLog
+
+
+class ProPanDetailsAPIView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(",")[0]
+        else:
+            ip = request.META.get("REMOTE_ADDR")
+        return ip
 
     def post(self, request):
-        return self._fetch_pan(request, env="production")
+        pan = (request.data.get("pan") or "").strip().upper()
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
 
-    def _fetch_pan(self, request, env):
-        pan_number = request.data.get("pan")
-        if not pan_number:
+        if not pan or pan.strip() == "":
+            error_msg = "Missing required field: pan"
+            self._log_request(
+                pan_number=None,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=400,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
             return Response(
-                    {
-                        "success": False,
-                        "status": 400,
-                        "error": "PAN number is required", "data": None
-                    },
-                    status=400,
-                )
+                {"success": False, "status": 400, "error": error_msg}, status=400
+            )
 
-        pan_number = pan_number.upper().strip()
-        seven_days_ago = timezone.now() - timedelta(days=7)
+        client = self._authenticate_client(request)
+        if isinstance(client, Response):
+            return client
 
-        cached = PanDetails.objects.filter(
-            pan_number=pan_number,
-            created_at__gte=seven_days_ago,
-            deleted_at__isnull=True,
+        service_name = "PAN"
+        service_id = KYC_MY_SERVICES.get(service_name.upper())
+
+        if not service_id:
+            error_msg = f"{service_name} service not configured"
+            self._log_request(
+                pan_number=pan,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=403,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return Response(
+                {"success": False, "status": 403, "error": error_msg}, status=403
+            )
+
+        try:
+            cache_days = self._get_cache_days(client, service_id)
+
+        except PermissionError as e:
+
+            self._log_request(
+                name1=None,
+                name2=None,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=403,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=str(e),
+                user=None,
+                match_obj=None,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            return Response({
+                "success": False,
+                "status": 403,
+                "error": str(e)   # ✅ fix here
+            }, status=403)
+
+        except ValueError as e:
+            self._log_request(
+                pan_number=pan,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=500,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=str(e),
+                user=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return Response({
+                "success": False,
+                "status": 500,
+                "error": str(e)
+            }, status=500)
+        
+        days_ago = timezone.now() - timedelta(days=cache_days)
+
+        cached = ProPanDetails.objects.filter(
+            pan_number__iexact=pan, 
+            created_at__gte=days_ago
         ).first()
+
         if cached:
-            serializer = PanDetailsSerializer(cached)
+            serializer = ProPanDetailsSerializer(cached)
+            self._log_request(
+                pan_number=pan,
+                vendor_name="CACHE",
+                endpoint=request.path,
+                status_code=200,
+                status="success",
+                request_payload=request.data,
+                response_payload=serializer.data,
+                user=None,
+                pan_details=cached,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
             return Response(
+                {"success": True, "status": 200, "message": "Cached data", "data": serializer.data}
+            )
+
+        vendors = self._get_priority_vendors(client, service_id)
+
+        print(f"[DEBUG] Found {vendors.count()} priority vendors for client={client.id}, service_id={service_id}")
+
+
+        if not vendors.exists():
+            error_msg = "No vendors assigned for this service"
+            self._log_request(
+                pan_number=pan,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=403,
+                status="fail",
+                request_payload=request.data,
+                response_payload=None,
+                error_message=error_msg,
+                user=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return Response(
+                {"success": False, "status": 403, "error": error_msg}, status=403
+            )
+
+        for vp in vendors:
+            vendor = vp.vendor
+
+            print(f"[DEBUG] Calling vendor {vendor.vendor_name} for PAN {pan}")
+            try:
+                response = call_vendor_api(vendor, request.data)
+                # if not response:
+                #     self._log_request(
+                #         pan_number=pan,
+                #         vendor_name=vendor.vendor_name,
+                #         endpoint=request.path,
+                #         status_code=502,
+                #         status="fail",
+                #         request_payload=request.data,
+                #         error_message="No response",
+                #         ip_address=ip_address,
+                #         user_agent=user_agent,
+                #     )
+                #     continue
+                if response and isinstance(response, dict) and response.get("http_error"):
+                    self._log_request(
+                        pan_number=pan,
+                        vendor_name=vendor.vendor_name,
+                        endpoint=request.path,
+                        status_code=response.get("status_code") or 500,
+                        status="fail",
+                        request_payload=request.data,
+                        response_payload=response.get("vendor_response"),
+                        error_message=response.get("error_message"),
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                    )
+                    continue
+
+
+                data = None
+                try:
+                    data = response.json()
+                except Exception:
+                    pass
+
+                normalized = normalize_vendor_response(vendor.vendor_name, data or {})
+                if not normalized:
+                    self._log_request(
+                        pan_number=pan,
+                        vendor_name=vendor.vendor_name,
+                        endpoint=request.path,
+                        status_code=204,
+                        status="fail",
+                        request_payload=request.data,
+                        response_payload=getattr(response, "text", None),
+                        error_message="No valid data returned",
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                    )
+                    continue
+
+                pan_obj = save_pan_data(normalized, client.id)
+               
+                serializer = ProPanDetailsSerializer(pan_obj)
+
+                self._log_request(
+                    pan_number=pan,
+                    vendor_name=vendor.vendor_name,
+                    endpoint=request.path,
+                    status_code=200,
+                    status="success",
+                    request_payload=request.data,
+                    response_payload=serializer.data,
+                    pan_details=pan_obj,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
+                return Response(
                     {
                         "success": True,
                         "status": 200,
-                        "error": None,
+                        "message": f"Data from {vendor.vendor_name}",
                         "data": serializer.data,
-                        "message": "Data from cache"
-                    },
-                    status=200,
+                    }
                 )
 
-        vendors = VendorManagement.objects.filter(
-            status="Active", deleted_at__isnull=True
-        ).order_by("priority")
-
-        user_id = request.user.id if request.user.is_authenticated else 0
-
-        for vendor in vendors:
-            response = call_vendor_api(vendor, pan_number, env=env)
-
-            if not response:
+            except Exception as e:
+                self._log_request(
+                    pan_number=pan,
+                    vendor_name=vendor.vendor_name,
+                    endpoint=request.path,
+                    status_code=500,
+                    status="fail",
+                    request_payload=request.data,
+                    response_payload=None,
+                    error_message=str(e),
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                )
                 continue
 
-            if response.status_code != 200:
-                return Response(
-                    {
-                        "success": False,
-                        "status": response.status_code,
-                        "error": f"Vendor {vendor.vendor_name} HTTP error: {response.status_code}",
-                        "data": None,
-                    },
-                    status=response.status_code,
-                )
-
-            try:
-                data = response.json()
-
-                status_code = data.get("statusCode")
-                status_message = data.get("statusMessage")
-                if status_code and status_code != 101: 
-                    return Response(
-                        {
-                            "success": False,
-                            "status": 400,
-                            "error": f"Vendor {vendor.vendor_name} error: {status_message}",
-                            "data": None,
-                        },
-                        status=400,
-                    )
-
-                normalized = normalize_vendor_response(vendor.vendor_name, data)
-                if normalized and normalized.get("pan_number"):
-                    pan_obj = save_pan_data(normalized, user_id)
-                    serializer = PanDetailsSerializer(pan_obj)
-                    return Response(
-                        {
-                            "success": True,
-                            "status": 200,
-                            "error": None,
-                            "data": serializer.data,
-                        },
-                        status=200,
-                    )
-
-            except ValueError as ve:
-                return Response(
-                    {
-                        "success": False,
-                        "status": 500,
-                        "error": f"Invalid response from vendor {vendor.vendor_name}: {ve}",
-                        "data": None,
-                    },
-                    status=500,
-                )
-            except Exception as e:
-                return Response(
-                    {
-                        "success": False,
-                        "status": 500,
-                        "error": f"Failed processing vendor {vendor.vendor_name} response: {e}",
-                        "data": None,
-                    },
-                    status=500,
-                )
-
         return Response(
-            {
-                "success": False,
-                "status": 404,
-                "error": "Unable to fetch PAN details from any vendor",
-                "data": None,
-            },
+            {"success": False, "status": 404, "error": "No vendor returned valid data"},
             status=404,
+        )
+
+
+    def _authenticate_client(self, request):
+        ip_address = self.get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        api_key = request.headers.get("X-API-KEY")
+
+        if not api_key:
+            self._log_request(
+                pan_number=None,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=401,
+                status="fail",
+                error_message="Missing API key",
+                request_payload=request.data,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
+
+        client = ClientManagement.objects.filter(
+            prod_key=api_key, deleted_at__isnull=True
+        ).first()
+
+        if not client:
+            self._log_request(
+                pan_number=None,
+                vendor_name=None,
+                endpoint=request.path,
+                status_code=401,
+                status="fail",
+                error_message="Invalid API key",
+                request_payload=request.data,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            return Response({"success": False, "status": 401, "error": "Invalid API key"}, status=401)
+
+        return client
+
+    def _get_cache_days(self, client, service_id):
+        cs = KycClientServicesManagement.objects.filter(
+            client=client,
+            myservice__id=service_id,
+            deleted_at__isnull=True,
+        ).first()
+
+        if not cs:
+            raise ValueError(f"Cache days not configured for client={client.id}, service_id={service_id}")
+
+        if cs.status is False:
+            raise PermissionError("Service is not permitted for client")
+
+        return cs.day
+
+    def _get_priority_vendors(self, client, service_id):
+        return (
+            KycVendorPriority.objects.filter(
+                client=client,
+                my_service_id=service_id,
+                deleted_at__isnull=True,
+            )
+            .select_related("vendor")
+            .order_by("priority")
+        )
+
+    def _log_request(
+        self,
+        pan_number,
+        vendor_name,
+        endpoint,
+        status_code,
+        status,
+        request_payload=None,
+        response_payload=None,
+        error_message=None,
+        user=None,
+        pan_details=None,
+        ip_address=None,
+        user_agent=None,
+    ):
+        if not isinstance(status_code, int):
+            raise ValueError(f"status_code must be an integer, got {status_code!r}")
+
+        ProPanRequestLog.objects.create(
+            pan_number=pan_number,
+            vendor=vendor_name,
+            endpoint=endpoint,
+            status_code=status_code,
+            status=status,
+            request_payload=request_payload,
+            response_payload=response_payload,
+            error_message=error_message,
+            user=user,
+            pan_details=pan_details,
+            ip_address=ip_address,
+            user_agent=user_agent,
         )

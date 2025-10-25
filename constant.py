@@ -26,3 +26,12 @@ USER_STATUS = {
 }
 USER_STATUS_CHOICES = [(k, v) for k, v in USER_STATUS.items()]
 MAX_LOGIN_ATTEMPTS = 5
+
+KYC_MY_SERVICES = {
+    "PAN": 1,
+    "DRIVING": 2,
+    "BILL": 4,
+    "VOTER": 5,
+    "NAME": 6,
+    "RC": 7,
+}

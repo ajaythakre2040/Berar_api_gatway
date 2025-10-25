@@ -16,6 +16,8 @@ from .uat_voter_details import UatVoterDetail
 from .uat_voter_request_log import UatVoterRequestLog
 from .uat_rc_details import UatRcDetails
 from .uat_rc_request_log import UatRcRequestLog
+from .uat_driving_license import UatDrivingLicense
+from .uat_driving_license_log import UatDrivingLicenseRequestLog
 
 
 # Pro Models Added
@@ -33,6 +35,10 @@ from .pro_name_request_log import ProNameMatchRequestLog
 
 from .pro_bill_details import ProElectricityBill
 from .pro_bill_request_log import ProBillRequestLog
+
+from .pro_driving_license import ProDrivingLicense
+from .pro_driving_license_log import ProDrivingLicenseRequestLog
+
 
 
 from .supported_vendor import SupportedVendor

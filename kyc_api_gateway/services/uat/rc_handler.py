@@ -9,52 +9,117 @@ if not SUREPASS_TOKEN:
 
 
 def build_rc_request(vendor_name, request_data):
-    vendor_key = vendor_name.lower()
+    if vendor_name.lower() == "karza":
 
-    if vendor_key == "karza":
-        return {
+     return {
             "reg_no": request_data.get("rc_number"),
             "consent": request_data.get("consent", "Y"),
             "clientData": {"caseId": request_data.get("clientData", {}).get("caseId", "123456")},
         }
 
-    elif vendor_key == "surepass":
-        return {"id_number": request_data.get("rc_number")}
+    elif vendor_name.lower() == "surepass":
+        # return {"id_number": request_data.get("rc_number")}
+        return {
+            "id_number": request_data.get("rc_number")
+        }
 
-    return {}
 
-def call_rc_vendor_api(vendor, request_data, env="uat"):
+    return request_data
+
+
+# def call_rc_vendor_api(vendor, request_data):
+
+#     vendor_key = vendor.vendor_name.lower()
+#     endpoint_path = VENDOR_RC_SERVICE_ENDPOINTS.get(vendor_key)
+    
+#     if not endpoint_path:
+#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint")
+#         return None
+
+#     base_url = vendor.end_point_uat
+#     if not base_url:
+#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no base URL for")
+#         return None
+
+#     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
+
+#     payload = build_rc_request(vendor_key, request_data)
+
+#     headers = {"Content-Type": "application/json"}
+
+#     if vendor_key == "karza":
+#         headers["x-karza-key"] = vendor.uat_key
+#     elif vendor_key == "surepass":
+#         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
+
+#     try:
+#         response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
+#         response.raise_for_status()
+#         try:
+#             return response.json()  
+#         except ValueError:
+#             print(f"[ERROR] Vendor '{vendor.vendor_name}' returned invalid JSON: {response.text}")
+#             return None
+#     except Exception as e:
+#         print(f"[ERROR] RC API call failed ({vendor.vendor_name}): {str(e)}")
+#         return None
+
+def call_rc_vendor_api(vendor, request_data):
     vendor_key = vendor.vendor_name.lower()
     endpoint_path = VENDOR_RC_SERVICE_ENDPOINTS.get(vendor_key)
-    if not endpoint_path:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint for {env}")
-        return None
+    base_url = vendor.uat_base_url
 
-    base_url = vendor.end_point_uat if env == "uat" else vendor.end_point_production
-    if not base_url:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no base URL for {env}")
-        return None
+    if not endpoint_path or not base_url:
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": f"Vendor '{vendor.vendor_name}' not configured properly."
+        }
 
     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
     payload = build_rc_request(vendor_key, request_data)
-    headers = {"Content-Type": "application/json"}
 
+    headers = {"Content-Type": "application/json"}
     if vendor_key == "karza":
-        headers["x-karza-key"] = vendor.uat_key if env == "uat" else vendor.production_key
+        headers["x-karza-key"] = vendor.uat_api_key
     elif vendor_key == "surepass":
         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
 
     try:
-        response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
-        response.raise_for_status()
+        response = requests.post(full_url, json=payload, headers=headers)
+        response.raise_for_status()  # Will trigger HTTPError for 4xx/5xx
+
         try:
-            return response.json()  
+            return response.json()
         except ValueError:
-            print(f"[ERROR] Vendor '{vendor.vendor_name}' returned invalid JSON: {response.text}")
-            return None
+            return {
+                "http_error": True,
+                "status_code": response.status_code,
+                "vendor_response": response.text,
+                "error_message": "Invalid JSON response"
+            }
+
+    except requests.HTTPError as e:
+        # Capture 400/403/500 error details for logging
+        try:
+            error_content = response.json()
+        except Exception:
+            error_content = response.text
+        return {
+            "http_error": True,
+            "status_code": response.status_code,
+            "vendor_response": error_content,
+            "error_message": str(e)
+        }
+
     except Exception as e:
-        print(f"[ERROR] RC API call failed ({vendor.vendor_name}): {str(e)}")
-        return None
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": str(e)
+        }
 
 
 def normalize_rc_response(vendor_name, raw_data):

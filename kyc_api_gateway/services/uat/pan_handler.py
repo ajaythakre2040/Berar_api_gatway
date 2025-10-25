@@ -8,10 +8,10 @@ SUREPASS_TOKEN = config("SUREPASS_TOKEN", default=None)
 if not SUREPASS_TOKEN:
     raise ValueError("SUREPASS_TOKEN is not set in your environment variables.")
 
-def build_vendor_request(vendor_name, pan_number):
+def build_vendor_request(vendor_name, request_data):
     if vendor_name == "karza":
         return {
-            "pan": pan_number,
+            "pan":  request_data.get("pan") or request_data.get("pan"),
             "aadhaarLastFour": "",
             "dob": "",
             "name": "",
@@ -24,57 +24,112 @@ def build_vendor_request(vendor_name, pan_number):
             "consent": "Y",
         }
     elif vendor_name == "surepass":
-        return {"id_number": pan_number}
-    return {"pan": pan_number, "consent": "Y"}
+        return {
+            "id_number": request_data.get("pan")
+        }
+    return request_data
 
-def call_vendor_api(vendor, pan_number, service=None, env="uat"):
+# def call_vendor_api_pan(vendor, request_data):
+   
+#     import requests
+#     vendor_key = vendor.vendor_name.lower()
+#     endpoint_path = VENDOR_SERVICE_ENDPOINTS.get(vendor_key)
 
+#     if not endpoint_path:
+#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint path configured.")
+#         return None
+
+#     base_url = vendor.end_point_uat
+#     if not base_url:
+#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no URL configured.")
+#         return None
+
+#     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
+#     print(f"[DEBUG] Full URL: {full_url}")
+
+#     headers = {"Content-Type": "application/json"}
+#     payload = build_vendor_request(vendor_key, request_data)
+
+#     print(f"[DEBUG] Payload: {payload}")
+
+#     if vendor_key == "karza":
+#         headers["x-karza-key"] = vendor.uat_key
+
+#     elif vendor_key == "surepass":
+#         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
+
+#     try:
+#         response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
+#         print(f"[DEBUG] Vendor '{vendor.vendor_name}' response status: {response.status_code}")
+#         return response
+
+#     except Exception as e:
+#         print(f"[ERROR] API call failed for vendor '{vendor.vendor_name}': {str(e)}")
+#         return None
+    
+def call_vendor_api(vendor, request_data):
+   
+    import requests
     vendor_key = vendor.vendor_name.lower()
     endpoint_path = VENDOR_SERVICE_ENDPOINTS.get(vendor_key)
+    base_url = vendor.uat_base_url
 
-    if not endpoint_path:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint path configured.")
-        return None
-
-    base_url = vendor.end_point_uat if env == "uat" else vendor.end_point_production
-    
-    if not base_url:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no {env} URL configured.")
-        return None
-
-    key = vendor.uat_key if env == "uat" else vendor.production_key
+    if not endpoint_path or not base_url:
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": f"Vendor '{vendor.vendor_name}' not configured properly."
+        }
 
     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
 
-    payload = build_vendor_request(vendor_key, pan_number)
     headers = {"Content-Type": "application/json"}
+    payload = build_vendor_request(vendor_key, request_data)
 
 
     if vendor_key == "karza":
-        key = vendor.uat_key if env=="uat" else vendor.production_key
-        headers["x-karza-key"] = key   
-        payload = {"pan": pan_number, "consent": "Y"}  
+        headers["x-karza-key"] = vendor.uat_api_key
 
     elif vendor_key == "surepass":
         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
-
-
+    
     try:
-        if vendor_key in ["karza", "surepass"]:
-            response = requests.post(
-                full_url, json=payload, headers=headers, timeout=vendor.timeout or 30
-            )
+        response = requests.post(full_url, json=payload, headers=headers)
+        response.raise_for_status()  # Will trigger HTTPError for 4xx/5xx
+        # response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
+        # return response
+    
+        try:
+            return response.json()
+        except ValueError:
+            return {
+                "http_error": True,
+                "status_code": response.status_code,
+                "vendor_response": response.text,
+                "error_message": "Invalid JSON response"
+            }
 
-        else:
-            response = requests.post(
-                full_url, params={"pan": pan_number}, headers=headers, timeout=vendor.timeout or 30
-            )
-        return response
+    except requests.HTTPError as e:
+        # Capture 400/403/500 error details for logging
+        try:
+            error_content = response.json()
+        except Exception:
+            error_content = response.text
+        return {
+            "http_error": True,
+            "status_code": response.status_code,
+            "vendor_response": error_content,
+            "error_message": str(e)
+        }
+
     except Exception as e:
-        print(f"[ERROR] API call failed for vendor '{vendor.vendor_name}': {str(e)}")
-        return None
-
-
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": str(e)
+        }
 def normalize_vendor_response(vendor_name, raw_data):
  
     result = raw_data.get("result") or raw_data.get("data") or {}
