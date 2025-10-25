@@ -302,7 +302,6 @@ class ForgotPasswordView(APIView):
                 {
                     "success": True,
                     "message": "If the email exists, a reset link has been sent.",
-                    "reset_link": reset_link,
                 },
                 status=status.HTTP_200_OK,
             )
