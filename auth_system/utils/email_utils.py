@@ -3,14 +3,17 @@ from django.conf import settings
 from datetime import datetime
 
 
-def send_reset_password_email(to_email, reset_link):
+def send_reset_password_email(to_email, reset_link, user_name=None):
     subject = "Reset your Api Gatway account password"
     from_email = f"Api Gatway <{settings.DEFAULT_FROM_EMAIL}>"
     year = datetime.now().year
     timestamp = datetime.now().strftime("%d %b %Y, %I:%M %p")
 
+    # Use user_name if available, otherwise just say "Hi"
+    greeting = f"Hi {user_name}," if user_name else "Hi,"
+
     text_content = f"""
-Hi,
+{greeting}
 
 We received a request on {timestamp} to reset the password for your Api Gatway account.
 
@@ -34,7 +37,7 @@ Api Gatway Support Team
       </tr>
       <tr>
         <td style="padding: 30px; color: #333333;">
-          <p style="font-size: 16px;">Hi,</p>
+          <p style="font-size: 16px;">{greeting}</p>
           <p style="font-size: 15px;">
             We received a request on <strong>{timestamp}</strong> to reset the password for your Api Gatway account.
           </p>

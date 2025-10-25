@@ -297,7 +297,7 @@ class ForgotPasswordView(APIView):
         )
 
         try:
-            send_reset_password_email(email, reset_link)
+            send_reset_password_email(email, reset_link, user_name=user.first_name)
             return Response(
                 {
                     "success": True,
