@@ -302,7 +302,7 @@ class ProVoterDetailsAPIView(APIView):
             return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
 
         client = ClientManagement.objects.filter(
-            prod_key=api_key,
+            production_key=api_key,
             deleted_at__isnull=True
         ).first()
 

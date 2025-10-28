@@ -214,24 +214,24 @@ class ProNameMatchAPIView(APIView):
             try:
                 response = call_vendor_api(vendor, request.data)
 
-                if not response:
-                    error_msg = f"No response from vendor {vendor.vendor_name}"
+                if response and response.get("http_error"):
                     self._log_request(
                         name1=name1,
                         name2=name2,
                         vendor_name=vendor.vendor_name,
                         endpoint=endpoint,
-                        status_code=502,
+                        status_code=response.get("status_code") or 500,
                         status="fail",
                         request_payload=request.data,
-                        response_payload=None,
-                        error_message=error_msg,
+                        response_payload=response.get("vendor_response"),
+                        error_message=response.get("error_message"),
                         user=None,
                         match_obj=None,
                         ip_address=ip_address,
                         user_agent=user_agent
                     )
-                    continue
+                    continue 
+                
                 try:
                     data = response.json()
                 except Exception:
@@ -342,7 +342,7 @@ class ProNameMatchAPIView(APIView):
             }, status=401)
 
         client = ClientManagement.objects.filter(
-            prod_key=api_key,
+            production_key=api_key,
             deleted_at__isnull=True
         ).first()
 

@@ -183,19 +183,7 @@ class UatPanDetailsAPIView(APIView):
             print(f"[DEBUG] Calling vendor {vendor.vendor_name} for PAN {pan}")
             try:
                 response = call_vendor_api(vendor, request.data)
-                # if not response:
-                #     self._log_request(
-                #         pan_number=pan,
-                #         vendor_name=vendor.vendor_name,
-                #         endpoint=request.path,
-                #         status_code=502,
-                #         status="fail",
-                #         request_payload=request.data,
-                #         error_message="No response",
-                #         ip_address=ip_address,
-                #         user_agent=user_agent,
-                #     )
-                #     continue
+               
                 if response and isinstance(response, dict) and response.get("http_error"):
                         self._log_request(
                             pan_number=pan,
@@ -212,7 +200,7 @@ class UatPanDetailsAPIView(APIView):
                         continue
                 data = None
                 try:
-                    data = response.json()
+                    data = response
                 except Exception:
                     pass
 

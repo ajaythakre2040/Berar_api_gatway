@@ -205,15 +205,11 @@ class ProBillDetailsAPIView(APIView):
 
         endpoint = request.path
 
-        # print(f"[DEBUG] Starting vendor calls for client={client.id}, service_id={service_id}")
-        # print(f"[DEBUG] Request data: {request.data}")
-
         for vp in vendors:
             vendor = vp.vendor
             try:
                 response = call_vendor_api(vendor, request.data)
 
-                # if not response:
                 if response and response.get("http_error"):
 
                     self._log_request(
@@ -331,7 +327,7 @@ class ProBillDetailsAPIView(APIView):
             return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
 
         client = ClientManagement.objects.filter(
-            prod_key=api_key,
+            production_key=api_key,
             deleted_at__isnull=True
         ).first()
 

@@ -20,6 +20,8 @@ class ClientManagement(models.Model):
     )
     risk_level = models.CharField(max_length=100)
     compliance_level = models.CharField(max_length=100)
+    uat_key = models.CharField(max_length=255, unique=True, null=True,)
+    production_key = models.CharField(max_length=255, unique=True, null=True,)
 
     created_by = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)

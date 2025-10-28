@@ -180,7 +180,7 @@ class UatVoterDetailsAPIView(APIView):
             try:
                 response = call_voter_vendor_api(vendor, request.data)
 
-                print('response', response)
+                print('Response in View', response)
 
                 if response and response.get("http_error"):
                     self._log_request(
@@ -306,6 +306,8 @@ class UatVoterDetailsAPIView(APIView):
             deleted_at__isnull=True
         ).first()
 
+        print('this is client', client)
+        
         if not client:
             self._log_request(
                 voter_id=None,

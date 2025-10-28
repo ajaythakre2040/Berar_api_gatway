@@ -29,9 +29,10 @@ MAX_LOGIN_ATTEMPTS = 5
 
 KYC_MY_SERVICES = {
     "PAN": 1,
-    "DRIVING": 2,
-    "BILL": 4,
-    "VOTER": 5,
-    "NAME": 6,
-    "RC": 7,
+    "BILL": 2,
+    "VOTER": 3,
+    "NAME": 4,
+    "RC": 5,
+    "DRIVING": 6,
 }
+

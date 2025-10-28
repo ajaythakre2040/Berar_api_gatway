@@ -158,21 +158,6 @@ class UatDrivingLicenseAPIView(APIView):
             try:
                 response = call_vendor_api_uat(vendor, request.data)
 
-                # if not response:
-                #     self._log_request(
-                #         dl_number=license_no,
-                #         name=None,
-                #         vendor=vendor.vendor_name,
-                #         endpoint=request.path,
-                #         status_code=502,
-                #         status="fail",
-                #         request_payload=request.data,
-                #         response_payload=None,
-                #         error_message=f"No response from vendor {vendor.vendor_name}",
-                #         dl_obj=None,
-                #     )
-                #     continue
-
                 if response and isinstance(response, dict) and response.get("http_error"):
                     self._log_request(
                         dl_number=license_no,
@@ -189,7 +174,7 @@ class UatDrivingLicenseAPIView(APIView):
                     continue
 
                 try:
-                    data = response.json()
+                    data = response
 
                 except Exception:
                     data = None

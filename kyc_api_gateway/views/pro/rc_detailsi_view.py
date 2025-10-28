@@ -165,22 +165,6 @@ class ProRcAPIView(APIView):
                 print(f"[DEBUG] Calling vendor {vendor.vendor_name} for RC {rc_number}")
 
                 response = call_rc_vendor_api(vendor, request.data)
-                # if not response:
-                    # self._log_request(
-                    #     rc_number=rc_number,
-                    #     vendor=vendor.vendor_name,
-                    #     endpoint=endpoint,
-                    #     status_code=502,
-                    #     status="fail",
-                    #     request_payload=request.data,
-                    #     response_payload=None,
-                    #     error_message="No response from vendor",
-                    #     user=user,
-                    #     rc_details=None,
-                    #     ip_address=ip_address,
-                    #     user_agent=user_agent,
-                    # )
-                    # continue
 
                 if response and response.get("http_error"):
                     self._log_request(
@@ -305,7 +289,7 @@ class ProRcAPIView(APIView):
             )
             return Response({"success": False, "status": 401, "error": "Missing API key"}, status=401)
 
-        client = ClientManagement.objects.filter(prod_key=api_key, deleted_at__isnull=True).first()
+        client = ClientManagement.objects.filter(production_key=api_key, deleted_at__isnull=True).first()
         if not client:
             self._log_request(
                 rc_number=None,

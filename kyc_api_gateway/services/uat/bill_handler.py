@@ -15,7 +15,7 @@ if not SUREPASS_TOKEN:
 def build_vendor_request(vendor_name, request_data):
  
     vendor_key = vendor_name.lower()
-    normalized_payload = None  # store the final vendor-specific payload
+    normalized_payload = None 
 
     if vendor_key == "karza":
         normalized_payload = {
@@ -34,7 +34,7 @@ def build_vendor_request(vendor_name, request_data):
         }
 
     else:
-        normalized_payload = request_data  # fallback
+        normalized_payload = request_data
 
     print(f"[DEBUG] Final payload for vendor '{vendor_name}': {normalized_payload}")
 
@@ -44,14 +44,14 @@ def build_vendor_request(vendor_name, request_data):
 def call_vendor_api_uat(vendor, request_data):
     vendor_key = vendor.vendor_name.lower()
     endpoint_path = VENDOR_BILL_SERVICE_ENDPOINTS.get(vendor_key)
-
-    if not endpoint_path:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint path configured.")
-        return None
-
     base_url = vendor.uat_base_url
-    if not base_url:
-        print(f"[ERROR] Vendor '{vendor.vendor_name}' has no UAT URL configured.")
+
+    print(f"vendor_key: {vendor_key}")
+    print(f"endpoint_path: {endpoint_path}")
+    print(f"base_url: {base_url}")
+
+    if not endpoint_path or not base_url:
+        print(f"[ERROR] Vendor '{vendor.vendor_name}' not configured properly.")
         return None
 
     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
@@ -63,14 +63,49 @@ def call_vendor_api_uat(vendor, request_data):
     elif vendor_key == "surepass":
         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
 
+    print("\n--- Calling Vendor UAT BILL API ---")
+    print("URL:", full_url)
+    print("Headers:", headers)
+    print("Payload:", payload)
+
     try:
-        # response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
         response = requests.post(full_url, json=payload, headers=headers)
-        print(f"[DEBUG] UAT Vendor {vendor.vendor_name} response status: {response.status_code}")
-        return response
+        response.raise_for_status()
+
+        print("\n--- Vendor UAT BILL API Response ---")
+        print("Status Code:", response.status_code)
+        print("Response JSON:", response.json())
+
+        return response.json()
+
+    except requests.HTTPError as e:
+        try:
+            error_content = response.json()
+        except Exception:
+            error_content = response.text
+
+        print("\n--- Vendor UAT BILL API HTTPError ---")
+        print("Status Code:", response.status_code)
+        print("Error Message:", str(e))
+        print("Error Content:", error_content)
+
+        return {
+            "http_error": True,
+            "status_code": response.status_code,
+            "vendor_response": error_content,
+            "error_message": str(e),
+        }
+
     except Exception as e:
-        print(f"[ERROR] UAT API call failed for vendor '{vendor.vendor_name}': {str(e)}")
-        return None
+        print("\n--- Vendor UAT BILL API General Exception ---")
+        print("Error Message:", str(e))
+
+        return {
+            "http_error": True,
+            "status_code": None,
+            "vendor_response": None,
+            "error_message": str(e),
+        }
 
 
 

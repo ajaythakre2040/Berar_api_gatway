@@ -1,4 +1,3 @@
-
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -37,7 +36,6 @@ class UatBillDetailsAPIView(APIView):
         ip_address = self.get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-        # user = request.user if getattr(request.user, "is_authenticated", False) else None
         if not consumer_id or not service_provider or consumer_id.strip() == "":
             missing = []
             if not consumer_id or consumer_id.strip() == "":
@@ -208,25 +206,25 @@ class UatBillDetailsAPIView(APIView):
             try:
                 response = call_vendor_api_uat(vendor, request.data)
 
-                if not response:
-                    self._log_request(
-                        customer_id=customer_id,
-                        service_provider=service_provider,
-                        vendor_name=vendor.vendor_name,
-                        endpoint=endpoint,
-                        status_code=502,
-                        status="fail",
-                        request_payload=request.data,
-                        response_payload=None,
-                        error_message="No response",
-                        user=None,
-                        ip_address=ip_address,
-                        user_agent=user_agent
-                    )
-                    continue
-
+               
+                if response and response.get("http_error"):
+                        self._log_request(
+                            customer_id=customer_id,
+                            service_provider=service_provider,
+                            vendor_name=vendor.vendor_name,
+                            endpoint=endpoint,
+                            status_code=response.get("status_code") or 500,
+                            status="fail",
+                            request_payload=request.data,
+                            response_payload=response.get("vendor_response"),
+                            error_message=response.get("error_message"),
+                            user=None,
+                            ip_address=ip_address,
+                            user_agent=user_agent,
+                        )
+                        continue
                 try:
-                    data = response.json()
+                    data = response
                 except Exception:
                     data = None
 

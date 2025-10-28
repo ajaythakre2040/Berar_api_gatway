@@ -27,43 +27,6 @@ def build_rc_request(vendor_name, request_data):
     return request_data
 
 
-# def call_rc_vendor_api(vendor, request_data):
-
-#     vendor_key = vendor.vendor_name.lower()
-#     endpoint_path = VENDOR_RC_SERVICE_ENDPOINTS.get(vendor_key)
-    
-#     if not endpoint_path:
-#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no endpoint")
-#         return None
-
-#     base_url = vendor.end_point_uat
-#     if not base_url:
-#         print(f"[ERROR] Vendor '{vendor.vendor_name}' has no base URL for")
-#         return None
-
-#     full_url = f"{base_url.rstrip('/')}/{endpoint_path.lstrip('/')}"
-
-#     payload = build_rc_request(vendor_key, request_data)
-
-#     headers = {"Content-Type": "application/json"}
-
-#     if vendor_key == "karza":
-#         headers["x-karza-key"] = vendor.uat_key
-#     elif vendor_key == "surepass":
-#         headers["Authorization"] = f"Bearer {SUREPASS_TOKEN}"
-
-#     try:
-#         response = requests.post(full_url, json=payload, headers=headers, timeout=vendor.timeout or 30)
-#         response.raise_for_status()
-#         try:
-#             return response.json()  
-#         except ValueError:
-#             print(f"[ERROR] Vendor '{vendor.vendor_name}' returned invalid JSON: {response.text}")
-#             return None
-#     except Exception as e:
-#         print(f"[ERROR] RC API call failed ({vendor.vendor_name}): {str(e)}")
-#         return None
-
 def call_rc_vendor_api(vendor, request_data):
     vendor_key = vendor.vendor_name.lower()
     endpoint_path = VENDOR_RC_SERVICE_ENDPOINTS.get(vendor_key)
@@ -88,9 +51,11 @@ def call_rc_vendor_api(vendor, request_data):
 
     try:
         response = requests.post(full_url, json=payload, headers=headers)
-        response.raise_for_status()  # Will trigger HTTPError for 4xx/5xx
+        response.raise_for_status()  
 
         try:
+
+            print('Hanlder Response', response.json())
             return response.json()
         except ValueError:
             return {
